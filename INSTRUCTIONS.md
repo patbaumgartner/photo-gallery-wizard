@@ -104,4 +104,4 @@ Each release contains:
 
 * `photo-gallery-wizard-<version>.jar` — runnable fat JAR (requires Java 25)
 * `photo-gallery-wizard-<version>-linux.zip` — native binary for Linux
-* `photo-gallery-wizard-<version>-windows.zip` — native binary + for Windows
+* `photo-gallery-wizard-<version>-windows.zip` — native binary for Windows
