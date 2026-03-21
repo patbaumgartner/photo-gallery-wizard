@@ -11,10 +11,12 @@ import org.springframework.context.ConfigurableApplicationContext;
 @ConfigurationPropertiesScan
 public class PhotoGalleryWizardApplication {
 
-public static void main(String[] args) throws Exception {
-ConfigurableApplicationContext context = SpringApplication.run(PhotoGalleryWizardApplication.class, args);
-AppProperties appProperties = context.getBean(AppProperties.class);
-new PhotoGalleryWizardTui(appProperties).run();
-}
+    public static void main(String[] args) throws Exception {
+        ConfigurableApplicationContext context = SpringApplication.run(PhotoGalleryWizardApplication.class, args);
+        AppProperties appProperties = context.getBean(AppProperties.class);
+        if (appProperties.mode().isBlank()) {
+            context.getBean(PhotoGalleryWizardTui.class).run();
+        }
+    }
 
 }
