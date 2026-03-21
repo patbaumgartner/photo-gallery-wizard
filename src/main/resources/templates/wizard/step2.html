@@ -26,7 +26,7 @@
                         <input type="hidden" name="galleryDescription" th:value="${galleryDescription}"/>
                         <div class="mb-3">
                             <label for="outputPath" class="form-label">Output Directory</label>
-                            <input type="text" class="form-control" id="outputPath" name="outputPath" placeholder="gallery-output"/>
+                            <input type="text" class="form-control" id="outputPath" name="outputPath" placeholder="gallery-output" th:value="${outputPath ?: ''}"/>
                             <div class="form-text">Directory where gallery files will be generated.</div>
                         </div>
                         <div class="d-grid gap-2 d-md-flex justify-content-md-between">
