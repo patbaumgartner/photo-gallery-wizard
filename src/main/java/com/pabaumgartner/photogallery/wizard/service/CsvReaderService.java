@@ -47,6 +47,7 @@ public class CsvReaderService {
 			boolean hasEventNameColumn = hasHeader && parser.getHeaderNames().contains("Event Name");
 			boolean hasPasswordColumn = hasHeader && parser.getHeaderNames().contains("Password");
 			boolean hasUrlColumn = hasHeader && parser.getHeaderNames().contains("URL");
+			boolean hasPicPeakEventIdColumn = hasHeader && parser.getHeaderNames().contains("PicPeak Event ID");
 
 			for (CSVRecord record : parser) {
 				if (record.size() == 0) {
@@ -74,12 +75,23 @@ public class CsvReaderService {
 
 				String password = hasPasswordColumn ? record.get("Password").trim() : "";
 				String shareUrl = hasUrlColumn ? record.get("URL").trim() : "";
-				codes.add(new GalleryCode(rawCode, password, shareUrl));
+				int picPeakEventId = 0;
+				if (hasPicPeakEventIdColumn) {
+					String idStr = record.get("PicPeak Event ID").trim();
+					if (!idStr.isEmpty()) {
+						try {
+							picPeakEventId = Integer.parseInt(idStr);
+						}
+						catch (NumberFormatException ignored) {
+						}
+					}
+				}
+				codes.add(new GalleryCode(rawCode, password, shareUrl, picPeakEventId));
 			}
 		}
 
 		LOGGER.atInfo().addArgument(() -> codes.size()).addArgument(csvFile).log("Read {} valid gallery codes from {}");
-		return new CsvReadResult(codes, eventName);
+		return new CsvReadResult(eventName, codes);
 	}
 
 	private boolean hasHeaderRow(Path csvFile) throws IOException {

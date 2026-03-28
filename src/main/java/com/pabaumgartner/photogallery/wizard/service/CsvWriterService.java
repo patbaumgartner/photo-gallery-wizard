@@ -27,14 +27,15 @@ public class CsvWriterService {
 		}
 
 		CSVFormat format = CSVFormat.DEFAULT.builder()
-			.setHeader("Number", "Code", "Password", "Event Name", "URL")
+			.setHeader("Number", "Code", "Password", "Event Name", "URL", "PicPeak Event ID")
 			.get();
 
 		try (Writer writer = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8);
 				CSVPrinter printer = new CSVPrinter(writer, format)) {
 			int number = 1;
 			for (GalleryCode code : codes) {
-				printer.printRecord(number++, code.code(), code.password(), eventName, code.toUrl(galleryUrl));
+				printer.printRecord(number++, code.code(), code.password(), eventName, code.toUrl(galleryUrl),
+						code.picPeakEventId() > 0 ? code.picPeakEventId() : "");
 			}
 		}
 

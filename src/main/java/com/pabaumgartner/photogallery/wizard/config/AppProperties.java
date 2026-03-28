@@ -1,41 +1,15 @@
 package com.pabaumgartner.photogallery.wizard.config;
 
-import jakarta.validation.constraints.Positive;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
 @Validated
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(String mode, String csvInputPath, String csvOutputPath, String outputPath, String baseUrl,
-		@Positive int qrSize, @Positive int gridColumns, @Positive int gridRows, String eventCode,
-		@Positive int codeCount, boolean showCuttingLines, String eventName, String galleryUrl, String logoUrl,
-		String galleryCodeLabel, String galleryPasswordLabel) {
+public record AppProperties(String eventCode, String eventName, String watermarkPath, int resizeMaxEdge,
+		float watermarkOpacity, float watermarkScale, float jpegQuality, int logoConnectTimeoutMs,
+		int logoReadTimeoutMs) {
 
 	public AppProperties {
-		if (mode == null) {
-			mode = "";
-		}
-		if (csvInputPath == null || csvInputPath.isBlank()) {
-			csvInputPath = "codes.csv";
-		}
-		if (csvOutputPath == null || csvOutputPath.isBlank()) {
-			csvOutputPath = "codes.csv";
-		}
-		if (outputPath == null || outputPath.isBlank()) {
-			outputPath = "qr-codes.pdf";
-		}
-		if (baseUrl == null || baseUrl.isBlank()) {
-			baseUrl = "https://my.site";
-		}
-		if (qrSize <= 0) {
-			qrSize = 200;
-		}
-		if (gridColumns <= 0) {
-			gridColumns = 3;
-		}
-		if (gridRows <= 0) {
-			gridRows = 4;
-		}
 		if (eventCode == null) {
 			eventCode = "";
 		}
@@ -46,33 +20,29 @@ public record AppProperties(String mode, String csvInputPath, String csvOutputPa
 						"app.event-code must be exactly 4 alphanumeric characters, got: '" + eventCode + "'");
 			}
 		}
-		if (codeCount <= 0) {
-			codeCount = 17;
-		}
 		if (eventName == null) {
 			eventName = "";
 		}
-		if (galleryUrl == null) {
-			galleryUrl = "";
+		if (watermarkPath == null || watermarkPath.isBlank()) {
+			watermarkPath = "configuration/watermark.png";
 		}
-		if (!galleryUrl.isBlank() && !galleryUrl.startsWith("https://")) {
-			throw new IllegalArgumentException("app.gallery-url must start with https://: " + galleryUrl);
+		if (resizeMaxEdge <= 0) {
+			resizeMaxEdge = 1200;
 		}
-		if (galleryUrl.isBlank()) {
-			galleryUrl = "https://my.site/gallery?code=";
+		if (watermarkOpacity <= 0f || watermarkOpacity > 1f) {
+			watermarkOpacity = 0.3f;
 		}
-		if (!galleryUrl.endsWith("=") && !galleryUrl.endsWith("/")) {
-			throw new IllegalArgumentException(
-					"app.gallery-url must end with '=' or '/' so the code can be appended: " + galleryUrl);
+		if (watermarkScale <= 0f || watermarkScale > 1f) {
+			watermarkScale = 0.4f;
 		}
-		if (logoUrl == null) {
-			logoUrl = "";
+		if (jpegQuality <= 0f || jpegQuality > 1f) {
+			jpegQuality = 0.9f;
 		}
-		if (galleryCodeLabel == null || galleryCodeLabel.isBlank()) {
-			galleryCodeLabel = "GALERIE CODE";
+		if (logoConnectTimeoutMs <= 0) {
+			logoConnectTimeoutMs = 5000;
 		}
-		if (galleryPasswordLabel == null || galleryPasswordLabel.isBlank()) {
-			galleryPasswordLabel = "GALERIE PASSWORT";
+		if (logoReadTimeoutMs <= 0) {
+			logoReadTimeoutMs = 10000;
 		}
 	}
 

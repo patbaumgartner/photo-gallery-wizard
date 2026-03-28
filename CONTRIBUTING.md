@@ -41,25 +41,29 @@ This project follows a [Code of Conduct](CODE_OF_CONDUCT.md). By participating, 
 ### Build
 
 ```bash
+# Run all tests with coverage
+./mvnw verify
+
 # Build JAR (skip tests)
 ./mvnw clean package -DskipTests
-
-# Run all tests
-./mvnw test
 
 # Run the application locally
 ./mvnw spring-boot:run
 ```
 
-### Code Style
+### Code Formatting
 
-The project uses [Spring Java Format](https://github.com/spring-io/spring-javaformat) to enforce consistent formatting. Run the formatter before committing:
+The project uses [Spring Java Format](https://github.com/spring-io/spring-javaformat) to enforce consistent formatting. Apply the formatter before committing:
 
 ```bash
 ./mvnw spring-javaformat:apply
 ```
 
-The CI pipeline will fail if the code is not formatted correctly.
+The CI pipeline will fail if the code is not formatted correctly. You can validate locally with:
+
+```bash
+./mvnw spring-javaformat:validate
+```
 
 ## Commit Messages
 
@@ -85,10 +89,11 @@ Format: `<type>(<scope>): <short description>`
 
 **Examples:**
 ```
-feat(web): add step-by-step gallery configuration wizard
-fix(config): correct output path default value
-refactor(web): extract gallery validation into helper
-docs(contributing): add conventional commit guidelines
+feat(tui): add keyboard shortcut to jump to upload step
+fix(watermark): correct resize calculation for portrait images
+refactor(tui): extract color palette into helper class
+docs(readme): update configuration property table
+chore(ci): add format validation to CI pipeline
 ```
 
 ## Making a Pull Request
@@ -99,7 +104,7 @@ docs(contributing): add conventional commit guidelines
    ```
 2. Make your changes in **small, atomic commits** following the commit conventions above.
 3. **Add tests** where appropriate.
-4. Run the full test suite:
+4. Run the full build:
    ```bash
    ./mvnw verify
    ```

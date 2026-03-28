@@ -5,35 +5,28 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.0.3</version>
+    <version>4.0.5</version>
     <relativePath></relativePath>
   </parent>
 
   <groupId>com.pabaumgartner</groupId>
   <artifactId>photo-gallery-wizard</artifactId>
   <version>0.0.1-SNAPSHOT</version>
+
   <name>photo-gallery-wizard</name>
   <description>A wizard application for setting up and managing photo galleries</description>
-  <url>https://github.com/patbaumgartner/photo-gallery-wizard</url>
-
-  <licenses>
-    <license>
-      <name>MIT License</name>
-      <url>https://opensource.org/licenses/MIT</url>
-    </license>
-  </licenses>
 
   <properties>
     <commons-csv.version>1.14.1</commons-csv.version>
     <jacoco.version>0.8.14</jacoco.version>
     <java.version>25</java.version>
-    <pdfbox.version>3.0.5</pdfbox.version>
+    <pdfbox.version>3.0.7</pdfbox.version>
     <rewrite-maven-plugin.version>6.32.0</rewrite-maven-plugin.version>
     <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
     <spring-javaformat-maven-plugin.version>0.0.47</spring-javaformat-maven-plugin.version>
-    <taikai.version>1.60.0</taikai.version>
+    <taikai.version>1.61.0</taikai.version>
     <tamboui.version>0.1.0</tamboui.version>
-    <zxing.version>3.5.3</zxing.version>
+    <zxing.version>3.5.4</zxing.version>
   </properties>
 
   <dependencies>
@@ -121,6 +114,9 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <jvmArguments>--enable-native-access=ALL-UNNAMED</jvmArguments>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -129,6 +125,20 @@
           <argLine>@{argLine} --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.lang.reflect=ALL-UNNAMED</argLine>
         </configuration>
+      </plugin>
+      <plugin>
+        <groupId>io.spring.javaformat</groupId>
+        <artifactId>spring-javaformat-maven-plugin</artifactId>
+        <version>${spring-javaformat-maven-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>spring-format-validate</id>
+            <goals>
+              <goal>validate</goal>
+            </goals>
+            <phase>validate</phase>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.jacoco</groupId>
@@ -152,6 +162,13 @@
       </plugin>
     </plugins>
   </build>
+  <url>https://github.com/patbaumgartner/photo-gallery-wizard</url>
+  <licenses>
+    <license>
+      <name>MIT License</name>
+      <url>https://opensource.org/licenses/MIT</url>
+    </license>
+  </licenses>
 
   <profiles>
     <profile>
@@ -274,5 +291,4 @@
       </build>
     </profile>
   </profiles>
-
 </project>

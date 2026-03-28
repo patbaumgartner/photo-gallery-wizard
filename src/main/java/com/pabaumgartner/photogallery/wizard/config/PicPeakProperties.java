@@ -8,11 +8,11 @@ public record PicPeakProperties(boolean enabled, String apiUrl, String username,
 		int expirationDays, boolean allowUserUploads, boolean feedbackEnabled, boolean allowRatings, boolean allowLikes,
 		boolean allowComments, boolean allowFavorites, boolean allowDownloads, boolean disableRightClick,
 		boolean enableDevtoolsProtection, boolean useCanvasRendering, boolean watermarkDownloads,
-		boolean heroLogoVisible, boolean requireNameEmail, boolean moderateComments,
-		boolean showFeedbackToGuests, String headerStyle, String heroDividerStyle, int cssTemplateId,
-		String colorTheme, String protectionLevel, String sourceMode, String heroImageAnchor,
-		String heroLogoSize, String heroLogoPosition, Integer uploadCategoryId, String externalPath,
-		Integer heroPhotoId) {
+		boolean heroLogoVisible, boolean requireNameEmail, boolean moderateComments, boolean showFeedbackToGuests,
+		String headerStyle, String heroDividerStyle, int cssTemplateId, String colorTheme, String protectionLevel,
+		String sourceMode, String heroImageAnchor, String heroLogoSize, String heroLogoPosition,
+		Integer uploadCategoryId, Integer klassenfotoCategoryId, Integer portraitCategoryId, String externalPath,
+		Integer heroPhotoId, int maxPasswordRetries) {
 
 	public PicPeakProperties {
 		if (apiUrl == null) {
@@ -26,6 +26,17 @@ public record PicPeakProperties(boolean enabled, String apiUrl, String username,
 		}
 		if (password == null) {
 			password = "";
+		}
+		if (enabled) {
+			if (apiUrl.isBlank()) {
+				throw new IllegalArgumentException("app.picpeak.api-url must be set when app.picpeak.enabled=true");
+			}
+			if (username.isBlank()) {
+				throw new IllegalArgumentException("app.picpeak.username must be set when app.picpeak.enabled=true");
+			}
+			if (password.isBlank()) {
+				throw new IllegalArgumentException("app.picpeak.password must be set when app.picpeak.enabled=true");
+			}
 		}
 		if (eventType == null) {
 			eventType = "schulfotos";
@@ -42,14 +53,14 @@ public record PicPeakProperties(boolean enabled, String apiUrl, String username,
 		if (welcomeMessage == null) {
 			welcomeMessage = "";
 		}
+		if (expirationDays <= 0) {
+			expirationDays = 30;
+		}
 		if (headerStyle == null) {
 			headerStyle = "standard";
 		}
 		if (heroDividerStyle == null) {
 			heroDividerStyle = "wave";
-		}
-		if (expirationDays <= 0) {
-			expirationDays = 30;
 		}
 		if (cssTemplateId <= 0) {
 			cssTemplateId = 1;
@@ -71,6 +82,9 @@ public record PicPeakProperties(boolean enabled, String apiUrl, String username,
 		}
 		if (heroLogoPosition == null) {
 			heroLogoPosition = "top";
+		}
+		if (maxPasswordRetries <= 0) {
+			maxPasswordRetries = 3;
 		}
 	}
 

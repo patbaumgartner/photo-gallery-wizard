@@ -5,8 +5,13 @@ on:
     tags:
       - 'v*'
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   build-jar:
+    name: Build JAR
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,6 +27,9 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Run tests
+        run: ./mvnw -B verify
+
       - name: Build JAR
         run: ./mvnw -B package -DskipTests
 
@@ -29,23 +37,35 @@ jobs:
         run: |
           VERSION="${GITHUB_REF_NAME}"
           JAR=$(find target -maxdepth 1 -name "*.jar" -not -name "*.jar.original" | head -1)
-          cp "$JAR" "photo-gallery-wizard-${VERSION}.jar"
-          echo "JAR=photo-gallery-wizard-${VERSION}.jar" >> "$GITHUB_ENV"
+          mkdir -p staging/configuration
+          cp "$JAR" "staging/photo-gallery-wizard-${VERSION}.jar"
+          cp logo.png staging/
+          cp configuration/picpeak-credentials.properties.example staging/configuration/
+          if [ -f configuration/watermark.png ]; then
+            cp configuration/watermark.png staging/configuration/
+          fi
+          if [ -f configuration/logo.png ]; then
+            cp configuration/logo.png staging/configuration/
+          fi
 
       - name: Upload JAR
         uses: actions/upload-artifact@v4
         with:
           name: release-jar
-          path: ${{ env.JAR }}
+          path: staging/
           retention-days: 1
 
   build-native:
+    name: Native (${{ matrix.platform }})
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             platform: linux
+            binary: photo-gallery-wizard
+          - os: macos-latest
+            platform: macos
             binary: photo-gallery-wizard
           - os: windows-latest
             platform: windows
@@ -80,8 +100,16 @@ jobs:
             exit 1
           fi
           echo "Found binary: $BINARY"
-          mkdir -p staging
+          mkdir -p staging/configuration
           cp "$BINARY" "staging/${{ matrix.binary }}"
+          cp logo.png staging/
+          cp configuration/picpeak-credentials.properties.example staging/configuration/
+          if [ -f configuration/watermark.png ]; then
+            cp configuration/watermark.png staging/configuration/
+          fi
+          if [ -f configuration/logo.png ]; then
+            cp configuration/logo.png staging/configuration/
+          fi
 
       - name: Upload release files
         uses: actions/upload-artifact@v4
@@ -91,6 +119,7 @@ jobs:
           retention-days: 1
 
   release:
+    name: Create Release
     needs: [ build-jar, build-native ]
     runs-on: ubuntu-latest
     permissions:
@@ -105,7 +134,7 @@ jobs:
       - name: Create release archives
         run: |
           VERSION="${GITHUB_REF_NAME}"
-          for dir in release-linux release-windows; do
+          for dir in release-jar release-linux release-macos release-windows; do
             platform="${dir#release-}"
             archive="photo-gallery-wizard-${VERSION}-${platform}.zip"
             cd "$dir"
@@ -113,10 +142,14 @@ jobs:
             cd ..
           done
 
+      - name: Generate checksums
+        run: |
+          sha256sum *.zip > checksums-sha256.txt
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             *.zip
-            release-jar/*.jar
+            checksums-sha256.txt
           generate_release_notes: true

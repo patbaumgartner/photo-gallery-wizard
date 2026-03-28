@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 
+import com.pabaumgartner.photogallery.wizard.config.SchulfotosProperties;
 import com.pabaumgartner.photogallery.wizard.model.GalleryCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,20 +32,21 @@ public class CodeGeneratorService {
 	private static final String PASSWORD_CHARSET = PASSWORD_UPPERCASE + PASSWORD_LOWERCASE + PASSWORD_DIGITS
 			+ PASSWORD_SPECIAL;
 
-	private static final int PASSWORD_LENGTH = 9;
-
 	private static final int REQUIRED_CLASSES = 4;
-
-	static {
-		if (PASSWORD_CHARSET.length() < PASSWORD_LENGTH) {
-			throw new IllegalStateException("PASSWORD_CHARSET length (" + PASSWORD_CHARSET.length()
-					+ ") must be >= PASSWORD_LENGTH (" + PASSWORD_LENGTH + ")");
-		}
-	}
 
 	private static final int MAX_PASSWORD_GENERATION_ATTEMPTS = 100;
 
+	private final int passwordLength;
+
 	private final SecureRandom random = new SecureRandom();
+
+	public CodeGeneratorService(SchulfotosProperties schulfotosProperties) {
+		this.passwordLength = schulfotosProperties.passwordLength();
+		if (PASSWORD_CHARSET.length() < passwordLength) {
+			throw new IllegalStateException("PASSWORD_CHARSET length (" + PASSWORD_CHARSET.length()
+					+ ") must be >= passwordLength (" + passwordLength + ")");
+		}
+	}
 
 	public List<GalleryCode> generateCodes(String eventCode, int count) {
 		if (eventCode == null || eventCode.isBlank()) {
@@ -83,7 +85,8 @@ public class CodeGeneratorService {
 			do {
 				password = generatePassword();
 				passwordAttempts++;
-			} while (!usedPasswords.add(password) && passwordAttempts < MAX_PASSWORD_GENERATION_ATTEMPTS);
+			}
+			while (!usedPasswords.add(password) && passwordAttempts < MAX_PASSWORD_GENERATION_ATTEMPTS);
 			if (passwordAttempts >= MAX_PASSWORD_GENERATION_ATTEMPTS) {
 				LOGGER.warn("Could not generate a unique password for code '{}' after {} attempts", code,
 						MAX_PASSWORD_GENERATION_ATTEMPTS);
@@ -92,9 +95,9 @@ public class CodeGeneratorService {
 		}
 
 		LOGGER.atInfo()
-				.addArgument(() -> codes.size())
-				.addArgument(eventCode)
-				.log("Generated {} unique gallery codes with event prefix '{}'");
+			.addArgument(() -> codes.size())
+			.addArgument(eventCode)
+			.log("Generated {} unique gallery codes with event prefix '{}'");
 		return codes;
 	}
 
@@ -122,9 +125,9 @@ public class CodeGeneratorService {
 		}
 		Collections.shuffle(pool, random);
 
-		List<Character> passwordChars = new ArrayList<>(PASSWORD_LENGTH);
+		List<Character> passwordChars = new ArrayList<>(passwordLength);
 		passwordChars.addAll(mandatory);
-		for (int i = 0; i < PASSWORD_LENGTH - REQUIRED_CLASSES; i++) {
+		for (int i = 0; i < passwordLength - REQUIRED_CLASSES; i++) {
 			passwordChars.add(pool.get(i));
 		}
 
@@ -146,7 +149,7 @@ public class CodeGeneratorService {
 				}
 			}
 		}
-		StringBuilder sb = new StringBuilder(PASSWORD_LENGTH);
+		StringBuilder sb = new StringBuilder(passwordLength);
 		for (char c : passwordChars) {
 			sb.append(c);
 		}

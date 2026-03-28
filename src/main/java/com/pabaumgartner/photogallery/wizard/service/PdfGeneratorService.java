@@ -14,6 +14,7 @@ import java.util.List;
 
 import javax.imageio.ImageIO;
 
+import com.pabaumgartner.photogallery.wizard.config.AppProperties;
 import com.pabaumgartner.photogallery.wizard.model.GalleryCode;
 import com.pabaumgartner.photogallery.wizard.model.PdfOptions;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -84,9 +85,9 @@ public class PdfGeneratorService {
 
 	private static final float FIT_FONT_MARGIN = 4f;
 
-	private static final int LOGO_CONNECT_TIMEOUT_MS = 5000;
+	private final int logoConnectTimeoutMs;
 
-	private static final int LOGO_READ_TIMEOUT_MS = 10000;
+	private final int logoReadTimeoutMs;
 
 	private static final String RESOURCES_PREFIX = "src/main/resources/";
 
@@ -95,6 +96,11 @@ public class PdfGeneratorService {
 	private static final float GRAY = 0.0f;
 
 	private static final float LINE_GRAY = 0.75f;
+
+	public PdfGeneratorService(AppProperties appProperties) {
+		this.logoConnectTimeoutMs = appProperties.logoConnectTimeoutMs();
+		this.logoReadTimeoutMs = appProperties.logoReadTimeoutMs();
+	}
 
 	public int createPdf(List<GalleryCode> codes, LinkedHashMap<GalleryCode, BufferedImage> qrImages,
 			PdfOptions options) throws IOException {
@@ -264,10 +270,10 @@ public class PdfGeneratorService {
 		}
 
 		LOGGER.atInfo()
-				.addArgument(outputPath)
-				.addArgument(numFrontPages)
-				.addArgument(() -> codes.size())
-				.log("Generated PDF: {} ({} pages, {} codes)");
+			.addArgument(outputPath)
+			.addArgument(numFrontPages)
+			.addArgument(() -> codes.size())
+			.log("Generated PDF: {} ({} pages, {} codes)");
 		return numFrontPages;
 	}
 
@@ -411,8 +417,8 @@ public class PdfGeneratorService {
 		}
 		try {
 			URLConnection connection = uri.toURL().openConnection();
-			connection.setConnectTimeout(LOGO_CONNECT_TIMEOUT_MS);
-			connection.setReadTimeout(LOGO_READ_TIMEOUT_MS);
+			connection.setConnectTimeout(logoConnectTimeoutMs);
+			connection.setReadTimeout(logoReadTimeoutMs);
 			byte[] imageData;
 			try (InputStream inputStream = connection.getInputStream()) {
 				imageData = inputStream.readAllBytes();

@@ -1,6 +1,5 @@
 package com.pabaumgartner.photogallery.wizard;
 
-import com.pabaumgartner.photogallery.wizard.config.AppProperties;
 import com.pabaumgartner.photogallery.wizard.tui.PhotoGalleryWizardTui;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -11,12 +10,9 @@ import org.springframework.context.ConfigurableApplicationContext;
 @ConfigurationPropertiesScan
 public class PhotoGalleryWizardApplication {
 
-    public static void main(String[] args) throws Exception {
-        ConfigurableApplicationContext context = SpringApplication.run(PhotoGalleryWizardApplication.class, args);
-        AppProperties appProperties = context.getBean(AppProperties.class);
-        if (appProperties.mode().isBlank()) {
-            context.getBean(PhotoGalleryWizardTui.class).run();
-        }
-    }
+	public static void main(String[] args) throws Exception {
+		ConfigurableApplicationContext context = SpringApplication.run(PhotoGalleryWizardApplication.class, args);
+		context.getBean(PhotoGalleryWizardTui.class).run();
+	}
 
 }

@@ -1,6 +1,6 @@
 # Photo Gallery Wizard — Instructions
 
-This document provides step-by-step instructions for running, configuring, and building the Photo Gallery Wizard application.
+Step-by-step guide for running, configuring, and building the Photo Gallery Wizard.
 
 ---
 
@@ -11,6 +11,7 @@ This document provides step-by-step instructions for running, configuring, and b
 - [Configuration](#configuration)
 - [Building from Source](#building-from-source)
 - [Building a Native Image](#building-a-native-image)
+- [Creating a Release](#creating-a-release)
 - [Downloading a Release](#downloading-a-release)
 
 ---
@@ -28,13 +29,13 @@ This document provides step-by-step instructions for running, configuring, and b
 
 ## Running the Application
 
+This is a **terminal application** — it renders an interactive TUI directly in your terminal. It does not start a web server.
+
 ### Using the Maven wrapper
 
 ```bash
 ./mvnw spring-boot:run
 ```
-
-Open your browser at [http://localhost:8080](http://localhost:8080) to access the wizard.
 
 ### Using the JAR
 
@@ -42,27 +43,38 @@ Open your browser at [http://localhost:8080](http://localhost:8080) to access th
 java -jar target/photo-gallery-wizard-*.jar
 ```
 
+### Using the native binary
+
+```bash
+./photo-gallery-wizard
+```
+
 ---
 
 ## Configuration
 
-All options can be set via `application.properties`, environment variables, or command-line flags (Spring Boot relaxed-binding applies).
+All options can be set in `application.properties`, environment variables, or command-line flags (Spring Boot relaxed-binding applies).
 
-**Example `application.properties`:**
-
-```properties
-app.gallery-name=My Photo Gallery
-app.gallery-description=A beautiful collection of memories
-app.output-path=gallery-output
-```
-
-**Available properties:**
+### App Properties
 
 | Property | Default | Description |
 |---|---|---|
-| `app.gallery-name` | `My Photo Gallery` | Default gallery name shown in the wizard |
-| `app.gallery-description` | *(empty)* | Default gallery description |
-| `app.output-path` | `gallery-output` | Default output directory for generated gallery files |
+| `app.event-code` | _(blank)_ | 4-char alphanumeric event code (pre-fills the TUI form) |
+| `app.event-name` | _(blank)_ | Event name (pre-fills the TUI form) |
+| `app.watermark-path` | `configuration/watermark.png` | Watermark image used during the resize step |
+| `app.resize-max-edge` | `1200` | Maximum pixel dimension after resize |
+
+### PicPeak Properties
+
+PicPeak credentials are loaded from an optional external file:
+
+```
+configuration/picpeak-credentials.properties
+```
+
+Copy `configuration/picpeak-credentials.properties.example` and fill in your values. The file is git-ignored by default.
+
+All PicPeak properties use the `app.picpeak` prefix — see the [README](README.md#picpeak-properties) for the full list.
 
 ---
 
@@ -73,35 +85,70 @@ app.output-path=gallery-output
 git clone https://github.com/patbaumgartner/photo-gallery-wizard.git
 cd photo-gallery-wizard
 
-# Build (skipping tests for speed)
-./mvnw clean package -DskipTests
-
-# Build including tests
+# Build and run tests with coverage
 ./mvnw clean verify
+
+# Build JAR only (skip tests)
+./mvnw clean package -DskipTests
 ```
 
-The fat JAR is produced at `target/photo-gallery-wizard-*.jar`.
+The fat JAR is produced at `target/photo-gallery-wizard-<version>.jar`.
+
+### Code Formatting
+
+The project enforces [Spring Java Format](https://github.com/spring-io/spring-javaformat). Apply formatting before committing:
+
+```bash
+./mvnw spring-javaformat:apply
+```
+
+The CI pipeline validates formatting automatically.
 
 ---
 
 ## Building a Native Image
 
-To build a GraalVM native image (requires GraalVM with `native-image` installed):
+Requires GraalVM with `native-image`:
 
 ```bash
 ./mvnw clean package -Pnative -DskipTests
 ```
 
-The native binary will be produced at `target/photo-gallery-wizard`.
+The native binary is produced at `target/photo-gallery-wizard`.
+
+---
+
+## Creating a Release
+
+Releases are fully automated via GitHub Actions. To create a release:
+
+1. Tag the commit:
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+2. The [Release workflow](.github/workflows/release.yml) runs automatically and:
+   - Builds and tests the JAR
+   - Builds native binaries for Linux, macOS, and Windows
+   - Packages each artifact with `logo.png` and the `configuration/` folder
+   - Creates platform-specific ZIP archives
+   - Generates SHA-256 checksums
+   - Publishes a GitHub Release with auto-generated release notes
 
 ---
 
 ## Downloading a Release
 
-Download the pre-built JAR or native binary for your platform from the [Releases](https://github.com/patbaumgartner/photo-gallery-wizard/releases) page.
+Download pre-built artifacts from the [Releases](https://github.com/patbaumgartner/photo-gallery-wizard/releases) page.
 
 Each release contains:
 
-* `photo-gallery-wizard-<version>.jar` — runnable fat JAR (requires Java 25)
-* `photo-gallery-wizard-<version>-linux.zip` — native binary for Linux
-* `photo-gallery-wizard-<version>-windows.zip` — native binary for Windows
+| Artifact | Description |
+|---|---|
+| `photo-gallery-wizard-<version>-jar.zip` | Runnable fat JAR (requires Java 25) |
+| `photo-gallery-wizard-<version>-linux.zip` | Native binary for Linux |
+| `photo-gallery-wizard-<version>-macos.zip` | Native binary for macOS |
+| `photo-gallery-wizard-<version>-windows.zip` | Native binary for Windows |
+| `checksums-sha256.txt` | SHA-256 checksums for all artifacts |
+
+Every ZIP includes the binary/JAR, `logo.png`, and a `configuration/` folder with `picpeak-credentials.properties.example` and `watermark.png`.
