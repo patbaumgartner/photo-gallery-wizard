@@ -109,6 +109,19 @@ jobs:
             cp configuration/logo.png staging/configuration/
           fi
 
+      - name: Sign Windows executable
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        env:
+          SIGN_CERT: ${{ secrets.WINDOWS_SIGN_CERT }}
+          SIGN_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERT_PASSWORD }}
+        run: |
+          $certBytes = [Convert]::FromBase64String($env:SIGN_CERT)
+          $certPath = Join-Path $env:RUNNER_TEMP "sign-cert.pfx"
+          [IO.File]::WriteAllBytes($certPath, $certBytes)
+          & signtool sign /f $certPath /p $env:SIGN_CERT_PASSWORD /fd sha256 /tr http://timestamp.digicert.com /td sha256 "staging/${{ matrix.binary }}"
+          Remove-Item $certPath
+
       - name: Upload release files
         uses: actions/upload-artifact@v5
         with:
