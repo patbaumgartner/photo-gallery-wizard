@@ -2,7 +2,6 @@
 setlocal
 
 set "SCRIPT_DIR=%~dp0"
-cd /d "%SCRIPT_DIR%.."
 
 for %%f in ("%SCRIPT_DIR%photo-gallery-wizard-*.jar") do (
     java -jar "%%f" %*
