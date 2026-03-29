@@ -1,0 +1,32 @@
+{
+  "reflection": [
+    {
+      "type": {
+        "proxy": [
+          "sun.misc.SignalHandler"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "jakarta.validation.constraints.Min"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "jakarta.validation.constraints.NotNull"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "jakarta.validation.constraints.Size"
+        ]
+      }
+    }
+  ]
+}
