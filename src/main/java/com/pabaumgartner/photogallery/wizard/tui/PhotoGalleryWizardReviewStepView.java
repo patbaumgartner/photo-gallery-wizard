@@ -4,10 +4,7 @@ import java.util.List;
 
 import dev.tamboui.toolkit.element.Element;
 
-import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.AMBER_GLOW;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.CYAN_NEON;
-import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.LIME_NEON;
-import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.PINK_NEON;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.SURFACE;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.SURFACE_ALT;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.TEXT_MUTED;

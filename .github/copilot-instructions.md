@@ -19,19 +19,33 @@ tui/             — TamboUI-based terminal UI (state machine, controller, step 
 
 - **All configuration classes are records** annotated with `@ConfigurationProperties`. They validate in the compact constructor and provide sensible defaults for null/zero/blank values.
 - **All model classes are records** with compact constructors that coerce nulls to safe defaults.
-- **Services are stateless**, use constructor injection (never `@Autowired` on fields), and are annotated with `@Service`.
+- **Services are stateless**, use constructor injection (never `@Autowired` on fields), and are annotated with `@Service`. Use `@Autowired` on a constructor only when the class has multiple constructors (e.g., for testability).
 - **No `*Impl` class names.** Services end with `Service`, properties end with `Properties`.
 - **No `java.util.Date` or `java.util.Calendar`.** Use `java.time` APIs.
 - **No `System.out` / `System.err`.** Use SLF4J `LOGGER` (private static final).
 - **Fields must not be public.** Constants follow `UPPER_SNAKE_CASE`.
 - **Interfaces must not have an `I` prefix.**
+- **No wildcard imports.** Use explicit imports only.
 - These rules are enforced by Taikai architecture tests.
+
+### Class Member Ordering
+
+Follow standard Java class member ordering:
+
+1. Static constants (`private static final`)
+2. Instance fields (`private final`)
+3. Constructors
+4. Public methods
+5. Package-private methods
+6. Private methods
+7. Inner classes, interfaces, records, and enums
 
 ## Code Style
 
 - **Spring Java Format** is enforced. Always run `./mvnw spring-javaformat:apply` before committing. CI validates formatting.
 - Use tabs for indentation (Spring Java Format default).
-- Imports: no wildcards, no cycles.
+- Imports: no wildcards, no cycles. Remove unused imports.
+- Never silently swallow exceptions — at minimum log at `debug` level.
 
 ## Testing
 
@@ -58,7 +72,7 @@ Properties are organized under three prefixes:
 
 | Prefix | Record | Purpose |
 |--------|--------|---------|
-| `app.*` | `AppProperties` | Event code/name, watermark, resize, JPEG quality, filename postfix |
+| `app.*` | `AppProperties` | Event code/name, watermark (opacity 0.5, scale 0.6), resize max 1200px, JPEG quality 0.9, filename postfix, logo timeouts |
 | `app.schulfotos.*` | `SchulfotosProperties` | Gallery URLs, QR/grid/PDF layout, folder naming, password length |
 | `app.picpeak.*` | `PicPeakProperties` | PicPeak API integration (URL, credentials, gallery settings) |
 
@@ -93,3 +107,10 @@ Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `perf`
 2. Use constructor injection for dependencies.
 3. Keep stateless — store config in `final` fields set from properties in the constructor.
 4. Create a matching `*ServiceTest` in the test `service` package (package-private class and methods).
+
+## When Modifying Existing Code
+
+1. Follow the existing class member ordering (constants → fields → constructors → methods → inner types).
+2. Remove unused imports after refactoring.
+3. Run `./mvnw spring-javaformat:apply` before committing.
+4. Verify with `./mvnw clean verify` — all 345+ tests must pass.

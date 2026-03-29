@@ -55,9 +55,6 @@ public class ImageProcessingService {
 		this.filenameStripPostfix = appProperties.filenameStripPostfix();
 	}
 
-	public record ProcessingProgress(double percent, String stage) {
-	}
-
 	public ImageProcessingResult processEventFolders(Path eventDir, Path watermarkImagePath, int maxEdge)
 			throws IOException {
 		return processEventFolders(eventDir, watermarkImagePath, maxEdge, progress -> {
@@ -169,13 +166,6 @@ public class ImageProcessingService {
 			}
 		}
 		return files;
-	}
-
-	@FunctionalInterface
-	private interface ProgressImageListener {
-
-		void onImageDone(int done, String file);
-
 	}
 
 	private BufferedImage resize(BufferedImage source, int maxEdge) {
@@ -303,6 +293,16 @@ public class ImageProcessingService {
 	}
 
 	public record ImageProcessingResult(int totalProcessed, List<Path> outputFolders) {
+	}
+
+	public record ProcessingProgress(double percent, String stage) {
+	}
+
+	@FunctionalInterface
+	private interface ProgressImageListener {
+
+		void onImageDone(int done, String file);
+
 	}
 
 }

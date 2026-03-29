@@ -168,8 +168,8 @@ Spring Boot relaxed binding applies, so properties can be set in `application.pr
 | `app.event-name` | _(blank)_ | Event name (pre-fills TUI form field) |
 | `app.watermark-path` | `configuration/watermark.png` | Watermark image for the resize step |
 | `app.resize-max-edge` | `1200` | Maximum pixel dimension after resize |
-| `app.watermark-opacity` | `0.3` | Watermark transparency (0.0–1.0) |
-| `app.watermark-scale` | `0.4` | Watermark size as fraction of image width (0.0–1.0) |
+| `app.watermark-opacity` | `0.5` | Watermark transparency (0.0–1.0) |
+| `app.watermark-scale` | `0.6` | Watermark size as fraction of image width (0.0–1.0) |
 | `app.jpeg-quality` | `0.9` | JPEG compression quality (0.0–1.0) |
 | `app.filename-strip-postfix` | `_NEU` | Postfix to strip from filenames during watermarking (e.g., `MEL_6175_NEU.jpg` → `MEL_6175.jpg`). Set to empty to disable. |
 | `app.logo-connect-timeout-ms` | `5000` | HTTP connect timeout for logo download (ms) |
@@ -216,7 +216,7 @@ All properties use the `app.picpeak` prefix.
 | `admin-email` | _(blank)_ |
 | `require-password` | `true` |
 | `welcome-message` | _(blank)_ |
-| `expiration-days` | `30` |
+| `expiration-days` | `42` |
 | `allow-user-uploads` | `false` |
 | `feedback-enabled` | `true` |
 | `allow-ratings` | `true` |
@@ -242,8 +242,11 @@ All properties use the `app.picpeak` prefix.
 | `hero-logo-size` | `medium` |
 | `hero-logo-position` | `top` |
 | `upload-category-id` | _(unset)_ |
+| `klassenfoto-category-id` | _(unset)_ |
+| `portrait-category-id` | _(unset)_ |
 | `external-path` | _(unset)_ |
 | `hero-photo-id` | _(unset)_ |
+| `max-password-retries` | `3` |
 
 Minimum required for PicPeak:
 

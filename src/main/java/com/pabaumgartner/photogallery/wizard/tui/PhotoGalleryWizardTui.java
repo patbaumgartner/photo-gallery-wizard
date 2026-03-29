@@ -29,7 +29,10 @@ import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.widgets.form.FormState;
 import org.springframework.stereotype.Component;
 
-import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.*;
+import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.BACKGROUND;
+import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.CYAN_NEON;
+import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.TEXT_PRIMARY;
+import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.readableText;
 import static dev.tamboui.toolkit.Toolkit.formField;
 import static dev.tamboui.toolkit.Toolkit.column;
 import static dev.tamboui.toolkit.Toolkit.text;

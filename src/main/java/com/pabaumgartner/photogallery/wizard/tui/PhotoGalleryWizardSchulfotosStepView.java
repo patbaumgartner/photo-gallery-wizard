@@ -6,12 +6,9 @@ import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.FormFieldElement;
 
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.CYAN_NEON;
-import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.LIME_NEON;
-import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.PINK_NEON;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.SURFACE_ALT;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.TEXT_MUTED;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.TEXT_PRIMARY;
-import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.AMBER_GLOW;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.readableText;
 import static dev.tamboui.toolkit.Toolkit.column;
 import static dev.tamboui.toolkit.Toolkit.panel;

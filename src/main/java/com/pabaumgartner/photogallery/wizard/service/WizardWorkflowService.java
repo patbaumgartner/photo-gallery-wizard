@@ -15,9 +15,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class WizardWorkflowService {
 
-	public record WorkflowProgress(double percent, String stage) {
-	}
-
 	private final CodeGeneratorService codeGeneratorService;
 
 	private final CsvWriterService csvWriterService;
@@ -77,6 +74,9 @@ public class WizardWorkflowService {
 		progressListener.accept(new WorkflowProgress(1.00d, "Fertig"));
 		return new WizardExecutionResult(request.eventCode(), request.eventName(), codes.size(), pageCount,
 				request.csvPath(), request.pdfPath());
+	}
+
+	public record WorkflowProgress(double percent, String stage) {
 	}
 
 }

@@ -37,12 +37,6 @@ public class PicPeakService {
 
 	private final String watermarkedSuffix;
 
-	record EventCreationResult(String shareLink, int eventId) {
-	}
-
-	public record UploadProgress(double percent, String stage) {
-	}
-
 	private final PicPeakProperties picPeakProperties;
 
 	private final CodeGeneratorService codeGeneratorService;
@@ -615,6 +609,12 @@ public class PicPeakService {
 	}
 
 	public record UploadResult(int galleriesUpdated, int totalFilesUploaded, List<String> errors) {
+	}
+
+	record EventCreationResult(String shareLink, int eventId) {
+	}
+
+	public record UploadProgress(double percent, String stage) {
 	}
 
 }

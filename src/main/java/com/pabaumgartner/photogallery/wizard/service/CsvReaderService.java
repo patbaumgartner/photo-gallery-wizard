@@ -82,7 +82,8 @@ public class CsvReaderService {
 						try {
 							picPeakEventId = Integer.parseInt(idStr);
 						}
-						catch (NumberFormatException ignored) {
+						catch (NumberFormatException ex) {
+							LOGGER.debug("Invalid PicPeak Event ID at line {}: '{}'", record.getRecordNumber(), idStr);
 						}
 					}
 				}
