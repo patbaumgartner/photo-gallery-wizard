@@ -79,6 +79,33 @@ final class PhotoGalleryWizardState {
 		activeStep = PhotoGalleryWizardStep.values()[activeStep.ordinal() - 1];
 	}
 
+	void resetAll() {
+		activeStep = PhotoGalleryWizardStep.SCHULFOTOS;
+		validationMessage = "";
+		executionMessage = "";
+		executionInProgress = false;
+		executionProgress = 0.0d;
+		executionStage = "";
+		overwriteConfirmed = false;
+		watermarkInProgress = false;
+		watermarkProgress = 0.0d;
+		watermarkStage = "";
+		uploadInProgress = false;
+		uploadProgress = 0.0d;
+		uploadStage = "";
+		executionResult = null;
+		availableCsvFiles = List.of();
+		createdFolders = List.of();
+		folderEventName = "";
+		folderCodes = List.of();
+		availableEventFolders = List.of();
+		watermarkResult = null;
+		uploadResult = null;
+		uploadMessage = "";
+		selectedCsvIndex = 0;
+		selectedFolderIndex = 0;
+	}
+
 	void clearValidationMessage() {
 		validationMessage = "";
 	}

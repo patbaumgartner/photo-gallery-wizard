@@ -224,12 +224,32 @@ class PhotoGalleryWizardControllerTest {
 	}
 
 	@Test
+	void f3ResetsToSchulfotos() {
+		state.activeStep(PhotoGalleryWizardStep.DONE);
+		EventResult result = controller.handleKeyEvent(KeyCode.F3, actions);
+		assertThat(result).isEqualTo(EventResult.HANDLED);
+		assertThat(state.activeStep()).isEqualTo(PhotoGalleryWizardStep.SCHULFOTOS);
+		assertThat(actions.resetFlowCalled).isTrue();
+	}
+
+	@Test
+	void f3ResetsFromAnyStep() {
+		state.activeStep(PhotoGalleryWizardStep.WATERMARK);
+		EventResult result = controller.handleKeyEvent(KeyCode.F3, actions);
+		assertThat(result).isEqualTo(EventResult.HANDLED);
+		assertThat(state.activeStep()).isEqualTo(PhotoGalleryWizardStep.SCHULFOTOS);
+		assertThat(actions.resetFlowCalled).isTrue();
+	}
+
+	@Test
 	void unknownKeyIsUnhandled() {
 		EventResult result = controller.handleKeyEvent(KeyCode.TAB, actions);
 		assertThat(result).isEqualTo(EventResult.UNHANDLED);
 	}
 
 	static class TestActions implements PhotoGalleryWizardController.Actions {
+
+		boolean resetFlowCalled;
 
 		boolean prepareFoldersCalled;
 
@@ -252,6 +272,11 @@ class PhotoGalleryWizardControllerTest {
 		int csvCount;
 
 		int folderCount;
+
+		@Override
+		public void resetFlow() {
+			resetFlowCalled = true;
+		}
 
 		@Override
 		public void prepareFoldersStep() {

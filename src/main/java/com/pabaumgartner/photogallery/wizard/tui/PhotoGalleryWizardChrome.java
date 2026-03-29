@@ -7,6 +7,7 @@ import dev.tamboui.toolkit.element.Element;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.BACKGROUND;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.CYAN_NEON;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.ERROR_GLOW;
+import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.LIME_NEON;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.PINK_NEON;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.SURFACE;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.SURFACE_ALT;
@@ -51,8 +52,9 @@ final class PhotoGalleryWizardChrome {
 		Color accent = viewModel.activeStep().accent();
 		return panel(() -> column(row(spacer(), shortcutBadge("TAB", "Fokus", CYAN_NEON), text("  "),
 				shortcutBadge("ENTER", "Weiter/Start", PINK_NEON), text("  "),
-				shortcutBadge("F2", "Zur\u00fcck", CYAN_NEON), text("  "), shortcutBadge("F4", "Ordner", CYAN_NEON),
-				text("  "), shortcutBadge("F5", "Wasserzeichen", CYAN_NEON), text("  "),
+				shortcutBadge("F2", "Zur\u00fcck", CYAN_NEON), text("  "), shortcutBadge("F3", "Neu", LIME_NEON),
+				text("  "), shortcutBadge("F4", "Ordner", CYAN_NEON), text("  "),
+				shortcutBadge("F5", "Wasserzeichen", CYAN_NEON), text("  "),
 				shortcutBadge("F6", "Hochladen", CYAN_NEON), text("  "), shortcutBadge("CTRL+C", "Beenden", PINK_NEON))
 			.length(1))).rounded().padding(1).bg(SURFACE_ALT).borderColor(accent).length(5);
 	}

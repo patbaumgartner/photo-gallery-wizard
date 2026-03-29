@@ -56,6 +56,8 @@ public class PhotoGalleryWizardTui {
 
 	private final SchulfotosProperties schulfotosProperties;
 
+	private final PicPeakProperties picPeakProperties;
+
 	private final WizardWorkflowService workflowService;
 
 	private final CsvReaderService csvReaderService;
@@ -72,6 +74,7 @@ public class PhotoGalleryWizardTui {
 			ImageProcessingService imageProcessingService, PicPeakService picPeakService) {
 		this.appProperties = appProperties;
 		this.schulfotosProperties = schulfotosProperties;
+		this.picPeakProperties = picPeakProperties;
 		this.workflowService = workflowService;
 		this.csvReaderService = csvReaderService;
 		this.folderStructureService = folderStructureService;
@@ -129,8 +132,21 @@ public class PhotoGalleryWizardTui {
 		prepareWatermarkStep();
 	}
 
+	private void resetFlow() {
+		form.setTextValue("schoolClassName", defaultSchoolClass(appProperties.eventName()));
+		form.setTextValue("schoolEventCode", defaultEventCode(appProperties.eventCode()));
+		form.setTextValue("schoolShootingDate", LocalDate.now().format(GERMAN_DATE));
+		form.setTextValue("schoolCodeCount", String.valueOf(schulfotosProperties.defaultCodeCount()));
+		form.setBooleanValue("schoolPicPeakEnabled", picPeakProperties.enabled());
+	}
+
 	private PhotoGalleryWizardController.Actions controllerActions() {
 		return new PhotoGalleryWizardController.Actions() {
+			@Override
+			public void resetFlow() {
+				PhotoGalleryWizardTui.this.resetFlow();
+			}
+
 			@Override
 			public void prepareFoldersStep() {
 				PhotoGalleryWizardTui.this.prepareFoldersStep();

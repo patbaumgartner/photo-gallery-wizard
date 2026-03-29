@@ -29,11 +29,13 @@ final class PhotoGalleryWizardWatermarkStepView {
 					text("Wasserzeichen-Verarbeitung läuft...").fg(readableText(TEXT_MUTED, SURFACE_ALT)).length(1),
 					text(" ").length(1),
 					text("Status: " + viewModel.watermarkStage()).fg(readableText(TEXT_MUTED, SURFACE_ALT)).length(1),
+					text(" ").length(1),
 					gauge(progress).gaugeColor(PINK_NEON)
 						.gaugeStyle(dev.tamboui.style.Style.create()
 							.fg(readableText(TEXT_MUTED, SURFACE_ALT))
 							.bg(SURFACE_ALT))
 						.length(3),
+					text(" ").length(1),
 					text("Bitte warten, bis alle Bilder verarbeitet sind.").fg(readableText(TEXT_MUTED, SURFACE_ALT))
 						.length(1)))
 				.rounded()

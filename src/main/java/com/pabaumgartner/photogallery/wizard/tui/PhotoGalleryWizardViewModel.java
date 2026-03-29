@@ -70,7 +70,7 @@ record PhotoGalleryWizardViewModel(PhotoGalleryWizardStep activeStep, String val
 					: "Event-Ordner mit Hoch/Runter wählen und mit Enter verarbeiten.";
 			case UPLOAD ->
 				uploadInProgress ? "Upload läuft." : "Mit Enter den Upload der Wasserzeichen-Bilder starten.";
-			case DONE -> "Workflow abgeschlossen. Mit F2 zurück oder mit CTRL+C beenden.";
+			case DONE -> "Workflow abgeschlossen. Mit F3 neuen Workflow starten oder mit CTRL+C beenden.";
 		};
 	}
 }

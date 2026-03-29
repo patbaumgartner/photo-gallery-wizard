@@ -31,10 +31,12 @@ final class PhotoGalleryWizardResultsStepView {
 						.length(1),
 					text(" ").length(1),
 					text("Status: " + viewModel.executionStage()).fg(readableText(TEXT_MUTED, SURFACE_ALT)).length(1),
+					text(" ").length(1),
 					gauge(progress).gaugeColor(CYAN_NEON)
 						.gaugeStyle(
 								dev.tamboui.style.Style.create().fg(readableText(TEXT_PRIMARY, SURFACE)).bg(SURFACE))
 						.length(3),
+					text(" ").length(1),
 					text("Der Fortschritt aktualisiert sich live.").fg(readableText(TEXT_MUTED, SURFACE_ALT))
 						.length(1)))
 				.rounded()

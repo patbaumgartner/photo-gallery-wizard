@@ -45,7 +45,7 @@ public class WizardWorkflowService {
 		progressListener.accept(new WorkflowProgress(0.05d, "Galerie-Codes werden vorbereitet"));
 		List<GalleryCode> codes = codeGeneratorService.generateCodes(request.eventCode(), request.codeCount());
 
-		progressListener.accept(new WorkflowProgress(0.20d, "PicPeak-Verknuepfungen werden erstellt"));
+		progressListener.accept(new WorkflowProgress(0.20d, "PicPeak-Verknüpfungen werden erstellt"));
 		codes = picPeakService.enrichWithShareLinks(codes, request.eventName(), request.picPeakEnabled(),
 				request.picPeakEventDate());
 

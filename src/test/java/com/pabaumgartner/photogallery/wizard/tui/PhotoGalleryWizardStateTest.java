@@ -327,4 +327,57 @@ class PhotoGalleryWizardStateTest {
 		assertThat(state.anyStepInProgress()).isTrue();
 	}
 
+	@Test
+	void resetAllResetsToInitialState() {
+		state.activeStep(PhotoGalleryWizardStep.DONE);
+		state.validationMessage("error");
+		state.executionMessage("msg");
+		state.executionInProgress(true);
+		state.executionProgress(0.5d);
+		state.executionStage("stage");
+		state.overwriteConfirmed(true);
+		state.watermarkInProgress(true);
+		state.watermarkProgress(0.75d);
+		state.watermarkStage("wm-stage");
+		state.uploadInProgress(true);
+		state.uploadProgress(0.9d);
+		state.uploadStage("up-stage");
+		state.executionResult(new WizardExecutionResult("ABCD", "Test", 5, 1, Path.of("csv"), Path.of("pdf")));
+		state.availableCsvFiles(List.of(Path.of("a.csv")));
+		state.createdFolders(List.of(Path.of("folder")));
+		state.folderEventName("Event");
+		state.folderCodes(List.of(new GalleryCode("ABCD-1234-WXYZ")));
+		state.availableEventFolders(List.of(Path.of("event")));
+		state.uploadMessage("upload-msg");
+		state.selectedCsvIndex(3);
+		state.selectedFolderIndex(2);
+
+		state.resetAll();
+
+		assertThat(state.activeStep()).isEqualTo(PhotoGalleryWizardStep.SCHULFOTOS);
+		assertThat(state.validationMessage()).isEmpty();
+		assertThat(state.executionMessage()).isEmpty();
+		assertThat(state.executionInProgress()).isFalse();
+		assertThat(state.executionProgress()).isEqualTo(0.0d);
+		assertThat(state.executionStage()).isEmpty();
+		assertThat(state.overwriteConfirmed()).isFalse();
+		assertThat(state.watermarkInProgress()).isFalse();
+		assertThat(state.watermarkProgress()).isEqualTo(0.0d);
+		assertThat(state.watermarkStage()).isEmpty();
+		assertThat(state.uploadInProgress()).isFalse();
+		assertThat(state.uploadProgress()).isEqualTo(0.0d);
+		assertThat(state.uploadStage()).isEmpty();
+		assertThat(state.executionResult()).isNull();
+		assertThat(state.availableCsvFiles()).isEmpty();
+		assertThat(state.createdFolders()).isEmpty();
+		assertThat(state.folderEventName()).isEmpty();
+		assertThat(state.folderCodes()).isEmpty();
+		assertThat(state.availableEventFolders()).isEmpty();
+		assertThat(state.watermarkResult()).isNull();
+		assertThat(state.uploadResult()).isNull();
+		assertThat(state.uploadMessage()).isEmpty();
+		assertThat(state.selectedCsvIndex()).isEqualTo(0);
+		assertThat(state.selectedFolderIndex()).isEqualTo(0);
+	}
+
 }

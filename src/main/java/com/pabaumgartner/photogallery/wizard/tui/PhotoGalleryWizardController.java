@@ -7,6 +7,8 @@ final class PhotoGalleryWizardController {
 
 	interface Actions {
 
+		void resetFlow();
+
 		void prepareFoldersStep();
 
 		void prepareWatermarkStep();
@@ -43,6 +45,11 @@ final class PhotoGalleryWizardController {
 		}
 		if (keyCode == KeyCode.F2 && state.canGoBack()) {
 			state.goBack();
+			return EventResult.HANDLED;
+		}
+		if (keyCode == KeyCode.F3) {
+			actions.resetFlow();
+			state.resetAll();
 			return EventResult.HANDLED;
 		}
 		if (keyCode == KeyCode.ENTER) {
