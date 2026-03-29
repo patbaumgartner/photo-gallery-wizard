@@ -1,4 +1,4 @@
-[![CI](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/ci.yml/badge.svg)](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/ci.yml) [![Release](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/release.yml/badge.svg)](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/release.yml) [![Java](https://img.shields.io/badge/Java-25-blue?logo=openjdk)](https://openjdk.org/) [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.3-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/ci.yml/badge.svg)](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/ci.yml) [![Release](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/release.yml/badge.svg)](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/release.yml) [![Java](https://img.shields.io/badge/Java-25-blue?logo=openjdk)](https://openjdk.org/) [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 # Photo Gallery Wizard
 
@@ -144,9 +144,15 @@ schulfotos/
     portrait-2-watermarked/
 ```
 
+### Filename Strip Postfix
+
+During watermarking, the application strips a configurable postfix from filenames before writing them to the output folder. This is useful when source images have been renamed by an editor (e.g., `MEL_6175_NEU.jpg`). With the default `app.filename-strip-postfix=_NEU`, the output file becomes `MEL_6175.jpg`.
+
+Set `app.filename-strip-postfix=` (empty) to disable stripping and keep original filenames.
+
 ### Upload Behavior
 
-- Each gallery receives all files from `klassenfoto-watermarked/`.
+- Each gallery receives all files from `klassenfotos-watermarked/`.
 - Each gallery also receives its own `portrait-N-watermarked/` files.
 - Rows without a PicPeak event ID are skipped.
 
@@ -162,6 +168,35 @@ Spring Boot relaxed binding applies, so properties can be set in `application.pr
 | `app.event-name` | _(blank)_ | Event name (pre-fills TUI form field) |
 | `app.watermark-path` | `configuration/watermark.png` | Watermark image for the resize step |
 | `app.resize-max-edge` | `1200` | Maximum pixel dimension after resize |
+| `app.watermark-opacity` | `0.3` | Watermark transparency (0.0–1.0) |
+| `app.watermark-scale` | `0.4` | Watermark size as fraction of image width (0.0–1.0) |
+| `app.jpeg-quality` | `0.9` | JPEG compression quality (0.0–1.0) |
+| `app.filename-strip-postfix` | `_NEU` | Postfix to strip from filenames during watermarking (e.g., `MEL_6175_NEU.jpg` → `MEL_6175.jpg`). Set to empty to disable. |
+| `app.logo-connect-timeout-ms` | `5000` | HTTP connect timeout for logo download (ms) |
+| `app.logo-read-timeout-ms` | `10000` | HTTP read timeout for logo download (ms) |
+
+### Schulfotos Properties
+
+All properties use the `app.schulfotos` prefix.
+
+| Property | Default | Description |
+|---|---|---|
+| `output-dir` | `schulfotos` | Root directory for event folders |
+| `base-url` | `https://mel-rohrer.ch/schulfotos` | Base URL for gallery pages |
+| `gallery-url` | `https://mel-rohrer.ch/schulfotos/?code=` | URL template for gallery codes |
+| `default-code-count` | `17` | Default number of gallery codes to generate |
+| `code-charset` | `A–Z0–9` | Character set for code generation |
+| `qr-size` | `200` | QR code image size in pixels |
+| `grid-columns` | `3` | Number of columns on the PDF card grid |
+| `grid-rows` | `4` | Number of rows on the PDF card grid |
+| `show-cutting-lines` | `true` | Whether to render cutting guides on the PDF |
+| `gallery-code-label` | `GALERIE CODE` | Label printed above the gallery code |
+| `gallery-password-label` | `GALERIE PASSWORT` | Label printed above the password |
+| `logo-path` | `configuration/logo.png` | Logo image path (HTTP URL or local file) |
+| `klassenfoto-folder` | `klassenfoto` | Folder name for class photos |
+| `portrait-prefix` | `portrait-` | Prefix for portrait folders (`portrait-1`, `portrait-2`, …) |
+| `watermarked-suffix` | `-watermarked` | Suffix appended to output folder names |
+| `password-length` | `9` | Generated password length |
 
 ### PicPeak Properties
 

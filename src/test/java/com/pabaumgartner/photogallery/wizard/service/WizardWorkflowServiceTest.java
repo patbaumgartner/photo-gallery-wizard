@@ -35,7 +35,7 @@ class WizardWorkflowServiceTest {
 	}
 
 	private static AppProperties defaultAppProperties() {
-		return new AppProperties("", "", null, 0, 0f, 0f, 0f, 0, 0);
+		return new AppProperties("", "", null, 0, 0f, 0f, 0f, 0, 0, null);
 	}
 
 	@BeforeEach

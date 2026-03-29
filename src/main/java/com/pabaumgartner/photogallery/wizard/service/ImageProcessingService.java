@@ -43,6 +43,8 @@ public class ImageProcessingService {
 
 	private final String watermarkedSuffix;
 
+	private final String filenameStripPostfix;
+
 	public ImageProcessingService(AppProperties appProperties, SchulfotosProperties schulfotosProperties) {
 		this.watermarkOpacity = appProperties.watermarkOpacity();
 		this.watermarkScale = appProperties.watermarkScale();
@@ -50,6 +52,7 @@ public class ImageProcessingService {
 		this.klassenfotoFolder = schulfotosProperties.klassenfotoFolder();
 		this.portraitPrefix = schulfotosProperties.portraitPrefix();
 		this.watermarkedSuffix = schulfotosProperties.watermarkedSuffix();
+		this.filenameStripPostfix = appProperties.filenameStripPostfix();
 	}
 
 	public record ProcessingProgress(double percent, String stage) {
@@ -131,7 +134,7 @@ public class ImageProcessingService {
 				BufferedImage resized = resize(original, maxEdge);
 				BufferedImage result = applyWatermark(resized, watermark);
 
-				String outputName = changeExtension(imageFile.getFileName().toString(), "jpg");
+				String outputName = changeExtension(stripPostfix(imageFile.getFileName().toString()), "jpg");
 				Path outputFile = outputDir.resolve(outputName);
 				writeJpeg(result, outputFile);
 				count++;
@@ -218,22 +221,36 @@ public class ImageProcessingService {
 	}
 
 	private BufferedImage loadWatermark(Path watermarkPath) throws IOException {
+		BufferedImage raw = null;
 		if (Files.exists(watermarkPath)) {
-			BufferedImage img = ImageIO.read(watermarkPath.toFile());
-			if (img != null) {
-				return img;
-			}
+			raw = ImageIO.read(watermarkPath.toFile());
 		}
-		var classPathStream = getClass().getClassLoader().getResourceAsStream(watermarkPath.toString());
-		if (classPathStream != null) {
-			try (classPathStream) {
-				BufferedImage img = ImageIO.read(classPathStream);
-				if (img != null) {
-					return img;
+		if (raw == null) {
+			var classPathStream = getClass().getClassLoader().getResourceAsStream(watermarkPath.toString());
+			if (classPathStream != null) {
+				try (classPathStream) {
+					raw = ImageIO.read(classPathStream);
 				}
 			}
 		}
-		throw new IOException("Watermark image not found: " + watermarkPath);
+		if (raw == null) {
+			throw new IOException("Watermark image not found: " + watermarkPath);
+		}
+		return toWhite(raw);
+	}
+
+	private BufferedImage toWhite(BufferedImage source) {
+		int width = source.getWidth();
+		int height = source.getHeight();
+		BufferedImage result = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width; x++) {
+				int argb = source.getRGB(x, y);
+				int alpha = (argb >> 24) & 0xFF;
+				result.setRGB(x, y, (alpha << 24) | 0x00FFFFFF);
+			}
+		}
+		return result;
 	}
 
 	private void writeJpeg(BufferedImage image, Path outputFile) throws IOException {
@@ -259,6 +276,22 @@ public class ImageProcessingService {
 	private boolean isImageFile(Path path) {
 		String name = path.getFileName().toString().toLowerCase();
 		return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
+	}
+
+	String stripPostfix(String filename) {
+		if (filenameStripPostfix.isEmpty()) {
+			return filename;
+		}
+		int dotIndex = filename.lastIndexOf('.');
+		if (dotIndex > 0) {
+			String baseName = filename.substring(0, dotIndex);
+			String extension = filename.substring(dotIndex);
+			if (baseName.endsWith(filenameStripPostfix)) {
+				baseName = baseName.substring(0, baseName.length() - filenameStripPostfix.length());
+			}
+			return baseName + extension;
+		}
+		return filename;
 	}
 
 	private String changeExtension(String filename, String ext) {

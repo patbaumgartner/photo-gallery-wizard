@@ -28,11 +28,13 @@ final class PhotoGalleryWizardUploadStepView {
 			return panel("PicPeak Hochladen", column(
 					text("Upload läuft...").fg(readableText(TEXT_MUTED, SURFACE_ALT)).length(1), text(" ").length(1),
 					text("Status: " + viewModel.uploadStage()).fg(readableText(TEXT_MUTED, SURFACE_ALT)).length(1),
+					text(" ").length(1),
 					gauge(progress).gaugeColor(AMBER_GLOW)
 						.gaugeStyle(dev.tamboui.style.Style.create()
 							.fg(readableText(TEXT_MUTED, SURFACE_ALT))
 							.bg(SURFACE_ALT))
 						.length(3),
+					text(" ").length(1),
 					text("Bitte warten, bis alle Galerien hochgeladen sind.").fg(readableText(TEXT_MUTED, SURFACE_ALT))
 						.length(1)))
 				.rounded()

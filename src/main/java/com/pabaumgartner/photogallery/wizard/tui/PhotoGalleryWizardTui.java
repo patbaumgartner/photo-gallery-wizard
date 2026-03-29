@@ -226,8 +226,7 @@ public class PhotoGalleryWizardTui {
 		}
 		catch (Exception ex) {
 			state.executionResult(null);
-			state.executionMessage(
-					ex.getMessage() == null || ex.getMessage().isBlank() ? ex.toString() : ex.getMessage());
+			state.executionMessage(PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 			state.overwriteConfirmed(false);
 		}
 		finally {
@@ -290,7 +289,8 @@ public class PhotoGalleryWizardTui {
 			state.advanceToWatermark();
 		}
 		catch (Exception ex) {
-			state.validationMessage("Ordnererstellung fehlgeschlagen: " + ex.getMessage());
+			state.validationMessage(
+					"Ordnererstellung fehlgeschlagen: " + PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 		}
 	}
 
@@ -326,7 +326,8 @@ public class PhotoGalleryWizardTui {
 			state.advanceToUpload();
 		}
 		catch (Exception ex) {
-			state.validationMessage("Wasserzeichen/Skalierung fehlgeschlagen: " + ex.getMessage());
+			state.validationMessage(
+					"Wasserzeichen/Skalierung fehlgeschlagen: " + PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 		}
 		finally {
 			state.watermarkInProgress(false);
@@ -366,7 +367,7 @@ public class PhotoGalleryWizardTui {
 		}
 		catch (Exception ex) {
 			state.uploadResult(null);
-			state.uploadMessage(ex.getMessage() == null || ex.getMessage().isBlank() ? ex.toString() : ex.getMessage());
+			state.uploadMessage(PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 			state.advanceToDone();
 		}
 		finally {
@@ -379,7 +380,8 @@ public class PhotoGalleryWizardTui {
 			state.availableCsvFiles(folderStructureService.listCsvFiles(schulfotosRootDir()));
 		}
 		catch (IOException ex) {
-			state.validationMessage("CSV-Dateien konnten nicht gelesen werden: " + ex.getMessage());
+			state.validationMessage(
+					"CSV-Dateien konnten nicht gelesen werden: " + PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 		}
 	}
 
@@ -388,7 +390,8 @@ public class PhotoGalleryWizardTui {
 			state.availableEventFolders(folderStructureService.listEventFolders(schulfotosRootDir()));
 		}
 		catch (IOException ex) {
-			state.validationMessage("Event-Ordner konnten nicht gelesen werden: " + ex.getMessage());
+			state.validationMessage("Event-Ordner konnten nicht gelesen werden: "
+					+ PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 		}
 	}
 

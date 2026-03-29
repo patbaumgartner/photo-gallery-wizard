@@ -7,7 +7,7 @@ import org.springframework.validation.annotation.Validated;
 @ConfigurationProperties(prefix = "app")
 public record AppProperties(String eventCode, String eventName, String watermarkPath, int resizeMaxEdge,
 		float watermarkOpacity, float watermarkScale, float jpegQuality, int logoConnectTimeoutMs,
-		int logoReadTimeoutMs) {
+		int logoReadTimeoutMs, String filenameStripPostfix) {
 
 	public AppProperties {
 		if (eventCode == null) {
@@ -43,6 +43,9 @@ public record AppProperties(String eventCode, String eventName, String watermark
 		}
 		if (logoReadTimeoutMs <= 0) {
 			logoReadTimeoutMs = 10000;
+		}
+		if (filenameStripPostfix == null) {
+			filenameStripPostfix = "_NEU";
 		}
 	}
 

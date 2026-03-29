@@ -116,5 +116,27 @@ PRs are reviewed promptly. Please be patient if feedback takes a day or two.
 ## Coding Standards
 
 - Follow standard Java conventions and the existing code style.
-- Keep services stateless and use constructor injection.
+- Keep services stateless and use constructor injection (never `@Autowired` on fields).
+- All configuration and model classes are **records** with compact constructors that validate inputs and provide defaults.
+- No `*Impl` class names. Services end with `Service`, properties end with `Properties`.
+- No `java.util.Date` or `java.util.Calendar` — use `java.time` APIs.
+- No `System.out` / `System.err` — use SLF4J `LOGGER` (`private static final`).
+- Fields must not be `public`. Constants follow `UPPER_SNAKE_CASE`.
+- Interfaces must not have an `I` prefix.
 - Architecture rules are enforced by [Taikai](https://github.com/enofex/taikai) tests; make sure they pass.
+
+### Adding New Properties
+
+1. Add the field to the appropriate `*Properties` record.
+2. Add default/validation logic in the compact constructor.
+3. Add the default value to `application.properties`.
+4. Update **all** test files that construct the record (add the new parameter).
+5. Add property tests in the corresponding `*PropertiesTest`.
+6. Document the property in `README.md` and `INSTRUCTIONS.md`.
+
+### Adding New Services
+
+1. Create in the `service` package, annotated with `@Service`.
+2. Use constructor injection for dependencies.
+3. Keep stateless — store config in `final` fields set from properties in the constructor.
+4. Create a matching `*ServiceTest` in the test `service` package (package-private class and methods).

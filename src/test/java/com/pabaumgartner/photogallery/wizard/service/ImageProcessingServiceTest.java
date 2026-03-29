@@ -26,7 +26,7 @@ class ImageProcessingServiceTest {
 	private ImageProcessingService service;
 
 	private static AppProperties defaultAppProperties() {
-		return new AppProperties("", "", null, 0, 0f, 0f, 0f, 0, 0);
+		return new AppProperties("", "", null, 0, 0f, 0f, 0f, 0, 0, null);
 	}
 
 	private static SchulfotosProperties defaultSchulfotosProperties() {
@@ -205,6 +205,44 @@ class ImageProcessingServiceTest {
 
 		assertThat(result.totalProcessed()).isEqualTo(3);
 		assertThat(result.outputFolders()).hasSize(3);
+	}
+
+	@Test
+	void stripPostfixRemovesNeuSuffix() {
+		assertThat(service.stripPostfix("MEL_6175_NEU.jpg")).isEqualTo("MEL_6175.jpg");
+	}
+
+	@Test
+	void stripPostfixKeepsFilenameWithoutNeuSuffix() {
+		assertThat(service.stripPostfix("MEL_6175.jpg")).isEqualTo("MEL_6175.jpg");
+	}
+
+	@Test
+	void stripPostfixWithCustomPostfix() {
+		ImageProcessingService customService = new ImageProcessingService(
+				new AppProperties("", "", null, 0, 0f, 0f, 0f, 0, 0, "_FINAL"), defaultSchulfotosProperties());
+		assertThat(customService.stripPostfix("MEL_6175_FINAL.jpg")).isEqualTo("MEL_6175.jpg");
+		assertThat(customService.stripPostfix("MEL_6175_NEU.jpg")).isEqualTo("MEL_6175_NEU.jpg");
+	}
+
+	@Test
+	void stripPostfixWithEmptyPostfixKeepsFilename() {
+		ImageProcessingService customService = new ImageProcessingService(
+				new AppProperties("", "", null, 0, 0f, 0f, 0f, 0, 0, ""), defaultSchulfotosProperties());
+		assertThat(customService.stripPostfix("MEL_6175_NEU.jpg")).isEqualTo("MEL_6175_NEU.jpg");
+	}
+
+	@Test
+	void processEventFoldersStripsNeuPostfixFromOutputFilename() throws IOException {
+		Path eventDir = tempDir.resolve("event");
+		createTestImage(eventDir.resolve("klassenfoto"), "MEL_6175_NEU.jpg", 2000, 1500);
+		Path wm = createWatermark(400, 200);
+
+		service.processEventFolders(eventDir, wm, 1200);
+
+		Path watermarkedDir = eventDir.resolve("klassenfotos-watermarked");
+		assertThat(watermarkedDir.resolve("MEL_6175.jpg")).exists();
+		assertThat(watermarkedDir.resolve("MEL_6175_NEU.jpg")).doesNotExist();
 	}
 
 }

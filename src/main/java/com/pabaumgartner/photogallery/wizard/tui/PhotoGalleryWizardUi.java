@@ -66,4 +66,15 @@ final class PhotoGalleryWizardUi {
 		return value == null || value.isBlank() ? fallback : value;
 	}
 
+	static String sanitizeError(String message) {
+		if (message == null || message.isBlank()) {
+			return "Unbekannter Fehler";
+		}
+		String clean = message.replaceAll("<[^>]*>", " ").replaceAll("\\s+", " ").trim();
+		if (clean.isBlank()) {
+			return "Unbekannter Fehler";
+		}
+		return clean.length() > 200 ? clean.substring(0, 200) + "…" : clean;
+	}
+
 }
