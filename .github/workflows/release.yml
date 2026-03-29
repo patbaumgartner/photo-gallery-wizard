@@ -110,7 +110,7 @@ jobs:
           fi
 
       - name: Sign Windows executable
-        if: matrix.platform == 'windows'
+        if: matrix.platform == 'windows' && env.SIGN_CERT != ''
         shell: pwsh
         env:
           SIGN_CERT: ${{ secrets.WINDOWS_SIGN_CERT }}
