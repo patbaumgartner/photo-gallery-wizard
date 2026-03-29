@@ -85,12 +85,12 @@ public class PhotoGalleryWizardTui {
 		this.imageProcessingService = imageProcessingService;
 		this.picPeakService = picPeakService;
 		this.form = FormState.builder()
-				.textField("schoolClassName", defaultSchoolClass(appProperties.eventName()))
-				.textField("schoolEventCode", defaultEventCode(appProperties.eventCode()))
-				.textField("schoolShootingDate", LocalDate.now().format(GERMAN_DATE))
-				.textField("schoolCodeCount", String.valueOf(schulfotosProperties.defaultCodeCount()))
-				.booleanField("schoolPicPeakEnabled", picPeakProperties.createEvents())
-				.build();
+			.textField("schoolClassName", defaultSchoolClass(appProperties.eventName()))
+			.textField("schoolEventCode", defaultEventCode(appProperties.eventCode()))
+			.textField("schoolShootingDate", LocalDate.now().format(GERMAN_DATE))
+			.textField("schoolCodeCount", String.valueOf(schulfotosProperties.defaultCodeCount()))
+			.booleanField("schoolPicPeakEnabled", picPeakProperties.createEvents())
+			.build();
 	}
 
 	public void run() throws Exception {
@@ -107,12 +107,12 @@ public class PhotoGalleryWizardTui {
 		return column(PhotoGalleryWizardChrome.header(viewModel),
 				PhotoGalleryWizardChrome.body(viewModel, currentStepContent),
 				PhotoGalleryWizardChrome.footer(viewModel))
-				.fill()
-				.bg(BACKGROUND)
-				.fg(readableText(TEXT_PRIMARY, BACKGROUND))
-				.focusable()
-				.id("wizard-root")
-				.onKeyEvent(event -> handleKeyEvent(event.code()));
+			.fill()
+			.bg(BACKGROUND)
+			.fg(readableText(TEXT_PRIMARY, BACKGROUND))
+			.focusable()
+			.id("wizard-root")
+			.onKeyEvent(event -> handleKeyEvent(event.code()));
 	}
 
 	private EventResult handleKeyEvent(KeyCode keyCode) {
@@ -257,11 +257,13 @@ public class PhotoGalleryWizardTui {
 			state.executionStage("Fertig");
 			state.executionProgress(1.0d);
 			state.overwriteConfirmed(false);
-		} catch (Exception ex) {
+		}
+		catch (Exception ex) {
 			state.executionResult(null);
 			state.executionMessage(PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 			state.overwriteConfirmed(false);
-		} finally {
+		}
+		finally {
 			state.executionInProgress(false);
 		}
 	}
@@ -324,7 +326,8 @@ public class PhotoGalleryWizardTui {
 			preselectEventFolder();
 			syncSelectedEventFolder();
 			state.advanceToWatermark();
-		} catch (Exception ex) {
+		}
+		catch (Exception ex) {
 			state.validationMessage(
 					"Ordnererstellung fehlgeschlagen: " + PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 		}
@@ -362,10 +365,12 @@ public class PhotoGalleryWizardTui {
 			state.watermarkProgress(1.0d);
 			state.watermarkStage("Wasserzeichen fertig");
 			state.advanceToUpload();
-		} catch (Exception ex) {
+		}
+		catch (Exception ex) {
 			state.validationMessage(
 					"Wasserzeichen/Skalierung fehlgeschlagen: " + PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
-		} finally {
+		}
+		finally {
 			state.watermarkInProgress(false);
 		}
 	}
@@ -409,11 +414,13 @@ public class PhotoGalleryWizardTui {
 			state.uploadProgress(1.0d);
 			state.uploadStage("Upload fertig");
 			state.advanceToDone();
-		} catch (Exception ex) {
+		}
+		catch (Exception ex) {
 			state.uploadResult(null);
 			state.uploadMessage(PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 			state.advanceToDone();
-		} finally {
+		}
+		finally {
 			state.uploadInProgress(false);
 		}
 	}
@@ -421,7 +428,8 @@ public class PhotoGalleryWizardTui {
 	private void scanCsvFiles() {
 		try {
 			state.availableCsvFiles(folderStructureService.listCsvFiles(schulfotosRootDir()));
-		} catch (IOException ex) {
+		}
+		catch (IOException ex) {
 			state.validationMessage(
 					"CSV-Dateien konnten nicht gelesen werden: " + PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 		}
@@ -430,7 +438,8 @@ public class PhotoGalleryWizardTui {
 	private void scanEventFolders() {
 		try {
 			state.availableEventFolders(folderStructureService.listEventFolders(schulfotosRootDir()));
-		} catch (IOException ex) {
+		}
+		catch (IOException ex) {
 			state.validationMessage("Event-Ordner konnten nicht gelesen werden: "
 					+ PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
 		}
@@ -471,7 +480,8 @@ public class PhotoGalleryWizardTui {
 	private WizardRequest buildRequestPreview() {
 		try {
 			return buildRequest();
-		} catch (RuntimeException ex) {
+		}
+		catch (RuntimeException ex) {
 			return new WizardRequest(normalizeEventCode(form.textValue("schoolEventCode")),
 					form.textValue("schoolClassName").trim(),
 					safeParsePositive(form.textValue("schoolCodeCount"), schulfotosProperties.defaultCodeCount()),
@@ -501,39 +511,38 @@ public class PhotoGalleryWizardTui {
 	private FormFieldElement classNameField() {
 		var textState = form.textField("schoolClassName");
 		return PhotoGalleryWizardUi.textField(formField(" Klassenname", textState).id("schoolClassName")
-				.placeholder("z. B. GS1d BA")
-				.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
+			.placeholder("z. B. GS1d BA")
+			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
 	}
 
 	private FormFieldElement eventCodeField() {
 		var textState = form.textField("schoolEventCode");
 		return PhotoGalleryWizardUi.textField(formField(" Event-Code", textState).id("schoolEventCode")
-				.placeholder("AB12")
-				.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
+			.placeholder("AB12")
+			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
 	}
 
 	private FormFieldElement shootingDateField() {
 		var textState = form.textField("schoolShootingDate");
 		return PhotoGalleryWizardUi.textField(formField(" Shooting-Datum", textState).id("schoolShootingDate")
-				.placeholder("25.03.2026")
-				.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
+			.placeholder("25.03.2026")
+			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
 	}
 
 	private FormFieldElement codeCountField() {
 		var textState = form.textField("schoolCodeCount");
 		return PhotoGalleryWizardUi.textField(formField(" Anzahl Codes", textState).id("schoolCodeCount")
-				.placeholder("17")
-				.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
+			.placeholder("17")
+			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
 	}
 
 	private FormFieldElement picPeakEnabledField() {
 		return PhotoGalleryWizardUi
-				.booleanField(
-						formField(" PicPeak-Events", form.booleanField("schoolPicPeakEnabled"))
-								.id("schoolPicPeakEnabled"),
-						CYAN_NEON)
-				.checkedSymbol("■ erzeugen")
-				.uncheckedSymbol("□ erzeugen");
+			.booleanField(
+					formField(" PicPeak-Events", form.booleanField("schoolPicPeakEnabled")).id("schoolPicPeakEnabled"),
+					CYAN_NEON)
+			.checkedSymbol("■ erzeugen")
+			.uncheckedSymbol("□ erzeugen");
 	}
 
 	private int totalSteps() {
@@ -616,7 +625,8 @@ public class PhotoGalleryWizardTui {
 				if (folderName.equals(eventFolderName(readResult))) {
 					return new FolderCsvMatch(i, readResult);
 				}
-			} catch (IOException ex) {
+			}
+			catch (IOException ex) {
 				continue;
 			}
 		}
@@ -646,7 +656,8 @@ public class PhotoGalleryWizardTui {
 	private boolean isPositiveInteger(String value) {
 		try {
 			return Integer.parseInt(value.trim()) > 0;
-		} catch (NumberFormatException ex) {
+		}
+		catch (NumberFormatException ex) {
 			return false;
 		}
 	}
@@ -659,7 +670,8 @@ public class PhotoGalleryWizardTui {
 		try {
 			LocalDate.parse(value.trim(), GERMAN_DATE);
 			return true;
-		} catch (DateTimeParseException ex) {
+		}
+		catch (DateTimeParseException ex) {
 			return false;
 		}
 	}
@@ -683,7 +695,7 @@ public class PhotoGalleryWizardTui {
 		StringBuilder builder = new StringBuilder(4);
 		for (int i = 0; i < 4; i++) {
 			builder.append(schulfotosProperties.codeCharset()
-					.charAt(ThreadLocalRandom.current().nextInt(schulfotosProperties.codeCharset().length())));
+				.charAt(ThreadLocalRandom.current().nextInt(schulfotosProperties.codeCharset().length())));
 		}
 		return builder.toString();
 	}
