@@ -29,7 +29,7 @@ jobs:
           cache: maven
 
       - name: Validate code format
-        run: ./mvnw -B spring-javaformat:validate
+        run: ./mvnw -B -ntp spring-javaformat:validate
 
   build:
     name: Build & Test
@@ -50,7 +50,7 @@ jobs:
           cache: maven
 
       - name: Build and run tests with coverage
-        run: ./mvnw -B verify
+        run: ./mvnw -B -ntp verify
 
       - name: Upload JaCoCo coverage report
         uses: actions/upload-artifact@v4
