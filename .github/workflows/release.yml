@@ -1,0 +1,216 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-jar:
+    name: Build JAR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run tests
+        run: ./mvnw -B -ntp verify
+
+      - name: Build JAR
+        run: ./mvnw -B -ntp package -DskipTests
+
+      - name: Rename JAR for release
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          JAR=$(find target -maxdepth 1 -name "*.jar" -not -name "*.jar.original" | head -1)
+          mkdir -p staging/configuration
+          cp "$JAR" "staging/photo-gallery-wizard-${VERSION}.jar"
+          cp configuration/picpeak-credentials.properties.example staging/configuration/
+          if [ -f configuration/watermark.png ]; then
+            cp configuration/watermark.png staging/configuration/
+          fi
+          if [ -f configuration/logo.png ]; then
+            cp configuration/logo.png staging/configuration/
+          fi
+          cp scripts/run.sh staging/
+          cp scripts/run.bat staging/
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-jar
+          path: staging/
+          retention-days: 1
+
+  build-native:
+    name: Native (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            binary: photo-gallery-wizard
+          - os: macos-latest
+            platform: macos
+            binary: photo-gallery-wizard
+          - os: windows-latest
+            platform: windows
+            binary: photo-gallery-wizard.exe
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up GraalVM 25
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '25'
+          distribution: 'graalvm'
+          cache: maven
+
+      - name: Build native image
+        shell: bash
+        run: |
+          set -o pipefail
+          ./mvnw -B -ntp -e package -Pnative -DskipTests | tee native-build.log
+
+      - name: Upload native build log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-build-log-${{ matrix.platform }}
+          path: native-build.log
+          retention-days: 7
+
+      - name: Prepare release files
+        shell: bash
+        run: |
+          BINARY=$(find target -maxdepth 1 -name "photo-gallery*" -not -name "*.jar" -not -name "*.jar.original" -type f | head -1)
+          if [ -z "$BINARY" ]; then
+            echo "ERROR: Native binary not found in target/" >&2
+            ls -la target/
+            exit 1
+          fi
+          echo "Found binary: $BINARY"
+          mkdir -p staging/configuration
+          cp "$BINARY" "staging/${{ matrix.binary }}"
+          cp configuration/picpeak-credentials.properties.example staging/configuration/
+          if [ -f configuration/watermark.png ]; then
+            cp configuration/watermark.png staging/configuration/
+          fi
+          if [ -f configuration/logo.png ]; then
+            cp configuration/logo.png staging/configuration/
+          fi
+
+      - name: Sign Windows executable
+        if: matrix.platform == 'windows' && env.SIGN_CERT != ''
+        shell: pwsh
+        env:
+          SIGN_CERT: ${{ secrets.WINDOWS_SIGN_CERT }}
+          SIGN_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGN_CERT_PASSWORD }}
+        run: |
+          function Resolve-SignToolPath {
+            $command = Get-Command signtool.exe -ErrorAction SilentlyContinue
+            if ($command) {
+              return $command.Source
+            }
+
+            $sdkRoots = @(
+              "${env:ProgramFiles(x86)}\Windows Kits\10\bin",
+              "${env:ProgramFiles}\Windows Kits\10\bin"
+            )
+            foreach ($root in $sdkRoots) {
+              if (Test-Path $root) {
+                $candidates = Get-ChildItem -Path $root -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+                  Sort-Object FullName -Descending
+                if ($candidates) {
+                  return $candidates[0].FullName
+                }
+              }
+            }
+
+            $vswhere = Join-Path "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer" "vswhere.exe"
+            if (Test-Path $vswhere) {
+              $installPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.Windows10SDK -property installationPath
+              if ($installPath) {
+                $candidate = Get-ChildItem -Path $installPath -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+                  Select-Object -First 1
+                if ($candidate) {
+                  return $candidate.FullName
+                }
+              }
+            }
+
+            throw "signtool.exe not found on runner"
+          }
+
+          $signtool = Resolve-SignToolPath
+          Write-Host "Using signtool: $signtool"
+
+          $certBytes = [Convert]::FromBase64String($env:SIGN_CERT)
+          $certPath = Join-Path $env:RUNNER_TEMP "sign-cert.pfx"
+          [IO.File]::WriteAllBytes($certPath, $certBytes)
+          & $signtool sign /f $certPath /p $env:SIGN_CERT_PASSWORD /fd sha256 /tr http://timestamp.digicert.com /td sha256 "staging/${{ matrix.binary }}"
+          Remove-Item $certPath
+
+      - name: Upload release files
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.platform }}
+          path: staging/
+          retention-days: 1
+
+  release:
+    name: Create Release
+    needs: [ build-jar, build-native ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+
+      - name: Create release archives
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          for dir in release-jar release-linux release-macos release-windows; do
+            platform="${dir#release-}"
+            archive="photo-gallery-wizard-${VERSION}-${platform}.zip"
+            cd "$dir"
+            zip -r "../${archive}" .
+            cd ..
+          done
+
+      - name: Generate checksums
+        run: |
+          sha256sum *.zip > checksums-sha256.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            *.zip
+            checksums-sha256.txt
+          generate_release_notes: true
