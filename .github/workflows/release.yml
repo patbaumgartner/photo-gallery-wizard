@@ -39,7 +39,6 @@ jobs:
           JAR=$(find target -maxdepth 1 -name "*.jar" -not -name "*.jar.original" | head -1)
           mkdir -p staging/configuration
           cp "$JAR" "staging/photo-gallery-wizard-${VERSION}.jar"
-          cp logo.png staging/
           cp configuration/picpeak-credentials.properties.example staging/configuration/
           if [ -f configuration/watermark.png ]; then
             cp configuration/watermark.png staging/configuration/
@@ -102,7 +101,6 @@ jobs:
           echo "Found binary: $BINARY"
           mkdir -p staging/configuration
           cp "$BINARY" "staging/${{ matrix.binary }}"
-          cp logo.png staging/
           cp configuration/picpeak-credentials.properties.example staging/configuration/
           if [ -f configuration/watermark.png ]; then
             cp configuration/watermark.png staging/configuration/
