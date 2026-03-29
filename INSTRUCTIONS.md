@@ -217,8 +217,8 @@ Releases are fully automated via GitHub Actions. To create a release:
 
 1. Tag the commit:
    ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
+   git tag v1.0.1
+   git push origin v1.0.1
    ```
 2. The [Release workflow](.github/workflows/release.yml) runs automatically and:
    - Builds and tests the JAR
@@ -227,6 +227,8 @@ Releases are fully automated via GitHub Actions. To create a release:
    - Creates platform-specific ZIP archives
    - Generates SHA-256 checksums
    - Publishes a GitHub Release with auto-generated release notes
+
+The release tag includes the `v` prefix (for example `v1.0.1`), but archive names use the plain semantic version (`1.0.1`).
 
 ---
 

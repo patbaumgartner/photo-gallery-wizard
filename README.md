@@ -44,11 +44,13 @@ The binary is written to `target/photo-gallery-wizard`.
 Tag a commit to trigger the release workflow:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
 The workflow builds the JAR and native binaries for Linux, macOS, and Windows, packages each with `logo.png` and the `configuration/` folder, and publishes a GitHub Release with SHA-256 checksums.
+
+The tag keeps the `v` prefix (`v1.0.1`), while artifact filenames use the plain semantic version (`1.0.1`).
 
 ## Running
 
