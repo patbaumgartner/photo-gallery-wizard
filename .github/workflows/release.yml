@@ -28,10 +28,10 @@ jobs:
           cache: maven
 
       - name: Run tests
-        run: ./mvnw -B verify
+        run: ./mvnw -B -ntp verify
 
       - name: Build JAR
-        run: ./mvnw -B package -DskipTests
+        run: ./mvnw -B -ntp package -DskipTests
 
       - name: Rename JAR for release
         run: |
@@ -87,7 +87,7 @@ jobs:
 
       - name: Build native image
         shell: bash
-        run: ./mvnw -B package -Pnative -DskipTests
+        run: ./mvnw -B -ntp package -Pnative -DskipTests
 
       - name: Prepare release files
         shell: bash
