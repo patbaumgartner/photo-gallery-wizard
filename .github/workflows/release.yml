@@ -46,6 +46,8 @@ jobs:
           if [ -f configuration/logo.png ]; then
             cp configuration/logo.png staging/configuration/
           fi
+          cp scripts/run.sh staging/
+          cp scripts/run.bat staging/
 
       - name: Upload JAR
         uses: actions/upload-artifact@v5
