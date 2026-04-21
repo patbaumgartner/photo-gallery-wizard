@@ -67,11 +67,14 @@ final class PhotoGalleryWizardUploadStepView {
 					text(" ").length(1));
 		}
 		List<Element> folderOptions = new ArrayList<>();
-		for (int i = 0; i < viewModel.availableEventFolders().size(); i++) {
-			folderOptions
-				.add(PhotoGalleryWizardUi.previewLine(i == viewModel.selectedFolderIndex() ? "▶ Ausgewählt" : " ",
-						viewModel.availableEventFolders().get(i).getFileName().toString(), accent));
-		}
+		List<String> folderNames = viewModel.availableEventFolders()
+			.stream()
+			.map(path -> path.getFileName().toString())
+			.toList();
+		folderOptions
+			.addAll(PhotoGalleryWizardUi.selectablePreviewLines(folderNames, viewModel.selectedFolderIndex(), accent));
+		folderOptions
+			.add(PhotoGalleryWizardUi.previewLine("Hinweis", "Hoch/Runter zeigt weitere Einträge", TEXT_PRIMARY));
 		return column(PhotoGalleryWizardUi.previewCard("Verfügbare Event-Ordner", folderOptions, AMBER_GLOW),
 				text(" ").length(1));
 	}

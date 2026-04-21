@@ -31,15 +31,13 @@ final class PhotoGalleryWizardChrome {
 		return panel(() -> column(
 				row(text(" SCHULFOTOS WORKFLOW WIZARD ")
 					.style(Style.create().fg(readableText(BACKGROUND, accent)).bg(accent).bold())).length(1),
-				text("").length(1),
-				text(stepIndicator(viewModel)).fg(readableText(TEXT_PRIMARY, SURFACE_ALT)).length(1)))
+				text("").length(1), text(stepStatus(viewModel)).fg(readableText(TEXT_PRIMARY, SURFACE_ALT)).length(1)))
 			.focusable()
 			.id("wizard-header-focus-anchor")
 			.rounded()
 			.padding(1)
 			.bg(SURFACE)
-			.borderColor(accent)
-			.length(7);
+			.borderColor(accent);
 	}
 
 	static Element body(PhotoGalleryWizardViewModel viewModel, Element currentStepContent) {
@@ -51,14 +49,21 @@ final class PhotoGalleryWizardChrome {
 	}
 
 	static Element footer(PhotoGalleryWizardViewModel viewModel) {
-		return panel(() -> column(row(spacer(), shortcutBadge("TAB", "Fokus", CYAN_NEON), text("  "),
-				shortcutBadge("ENTER", "Weiter/Start", viewModel.activeStep().accent()), text("  "),
-				shortcutBadge("F2", "Zur\u00fcck", backShortcutColor(viewModel)), text("  "),
-				shortcutBadge("F3", "Neu", LIME_NEON), text("  "), shortcutBadge("F4", "Ordner", AMBER_GLOW),
-				text("  "), shortcutBadge("F5", "Wasserzeichen", PINK_NEON), text("  "),
-				shortcutBadge("F6", "Hochladen", AMBER_GLOW), text("  "),
-				shortcutBadge("CTRL+C", "Beenden", ERROR_GLOW))
-			.length(1))).rounded().padding(1).bg(SURFACE_ALT).borderColor(viewModel.activeStep().accent()).length(5);
+		return panel(() -> column(
+				row(spacer(), shortcutBadge("TAB", "Fokus", CYAN_NEON), text("  "),
+						shortcutBadge("ENTER", "Weiter/Start", viewModel.activeStep().accent()), text("  "),
+						shortcutBadge("F2", "Zur\u00fcck", backShortcutColor(viewModel)), text("  "),
+						shortcutBadge("F3", "Neu", LIME_NEON), text("  "),
+						shortcutBadge("CTRL+C", "Beenden", ERROR_GLOW))
+					.length(1),
+				row(spacer(), shortcutBadge("F4", "Ordner", AMBER_GLOW), text("  "),
+						shortcutBadge("F5", "Wasserzeichen", PINK_NEON), text("  "),
+						shortcutBadge("F6", "Hochladen", AMBER_GLOW))
+					.length(1)))
+			.rounded()
+			.padding(1)
+			.bg(SURFACE_ALT)
+			.borderColor(viewModel.activeStep().accent());
 	}
 
 	private static Color backShortcutColor(PhotoGalleryWizardViewModel viewModel) {
@@ -69,25 +74,9 @@ final class PhotoGalleryWizardChrome {
 		return PhotoGalleryWizardStep.values()[activeStep.ordinal() - 1].accent();
 	}
 
-	private static String stepIndicator(PhotoGalleryWizardViewModel viewModel) {
-		PhotoGalleryWizardStep[] steps = PhotoGalleryWizardStep.values();
-		int active = viewModel.activeStep().ordinal();
-		StringBuilder builder = new StringBuilder("  ");
-		for (int i = 0; i < steps.length; i++) {
-			if (i > 0) {
-				builder.append("  ───  ");
-			}
-			if (i < active) {
-				builder.append("● ").append(steps[i].title());
-			}
-			else if (i == active) {
-				builder.append("◉ ").append(steps[i].title());
-			}
-			else {
-				builder.append("○ ").append(steps[i].title());
-			}
-		}
-		return builder.toString();
+	private static String stepStatus(PhotoGalleryWizardViewModel viewModel) {
+		return "Schritt " + viewModel.activeStep().position() + "/" + PhotoGalleryWizardStep.values().length + ": "
+				+ viewModel.activeStep().title() + " | " + viewModel.workflowStatusText();
 	}
 
 	private static Element validationPanel(PhotoGalleryWizardViewModel viewModel) {
@@ -98,8 +87,7 @@ final class PhotoGalleryWizardChrome {
 			.rounded()
 			.padding(1)
 			.bg(SURFACE_ALT)
-			.borderColor(ERROR_GLOW)
-			.length(5);
+			.borderColor(ERROR_GLOW);
 	}
 
 	private static Element shortcutBadge(String key, String action, Color accent) {
