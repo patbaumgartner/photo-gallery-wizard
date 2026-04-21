@@ -70,6 +70,8 @@ public class PhotoGalleryWizardTui {
 
 	private final PicPeakService picPeakService;
 
+	private ToolkitRunner runner;
+
 	public PhotoGalleryWizardTui(AppProperties appProperties, ImageProperties imageProperties,
 			SchulfotosProperties schulfotosProperties, PicPeakProperties picPeakProperties,
 			WizardWorkflowService workflowService, CsvReaderService csvReaderService,
@@ -95,12 +97,17 @@ public class PhotoGalleryWizardTui {
 
 	public void run() throws Exception {
 		var config = TuiConfig.builder().build();
-		try (var runner = ToolkitRunner.create(config)) {
-			runner.run(this::renderWizard);
+		try (var toolkitRunner = ToolkitRunner.create(config)) {
+			this.runner = toolkitRunner;
+			toolkitRunner.run(this::renderWizard);
+		}
+		finally {
+			this.runner = null;
 		}
 	}
 
 	private Element renderWizard() {
+		PhotoGalleryWizardUi.updateTerminalHeight(currentTerminalHeight());
 		PhotoGalleryWizardViewModel viewModel = buildViewModel();
 		Element currentStepContent = PhotoGalleryWizardStepRenderer.renderCurrentStep(viewModel, classNameField(),
 				eventCodeField(), shootingDateField(), codeCountField(), picPeakEnabledField());
@@ -120,6 +127,14 @@ public class PhotoGalleryWizardTui {
 			return EventResult.HANDLED;
 		}
 		return controller.handleKeyEvent(keyCode, controllerActions());
+	}
+
+	private int currentTerminalHeight() {
+		if (runner == null || runner.tuiRunner() == null || runner.tuiRunner().terminal() == null
+				|| runner.tuiRunner().terminal().size() == null) {
+			return 0;
+		}
+		return runner.tuiRunner().terminal().size().height();
 	}
 
 	private void prepareFoldersStep() {

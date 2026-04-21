@@ -33,11 +33,14 @@ final class PhotoGalleryWizardFoldersStepView {
 				.length(1));
 		}
 		else {
-			List<Element> csvLines = new ArrayList<>();
-			for (int i = 0; i < viewModel.availableCsvFiles().size(); i++) {
-				csvLines.add(PhotoGalleryWizardUi.previewLine(i == viewModel.selectedCsvIndex() ? "▶ Ausgewählt" : " ",
-						viewModel.availableCsvFiles().get(i).getFileName().toString(), accent));
-			}
+			List<String> csvOptions = viewModel.availableCsvFiles()
+				.stream()
+				.map(path -> path.getFileName().toString())
+				.toList();
+			List<Element> csvLines = new ArrayList<>(
+					PhotoGalleryWizardUi.selectablePreviewLines(csvOptions, viewModel.selectedCsvIndex(), accent));
+			csvLines
+				.add(PhotoGalleryWizardUi.previewLine("Hinweis", "Hoch/Runter zeigt weitere Einträge", TEXT_PRIMARY));
 			lines.add(PhotoGalleryWizardUi.previewCard("Verfügbare CSV-Dateien", csvLines, AMBER_GLOW));
 			lines.add(text(" ").length(1));
 			lines.add(PhotoGalleryWizardUi.previewCard("Anleitung", List.of(
