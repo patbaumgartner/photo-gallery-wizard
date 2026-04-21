@@ -11,7 +11,7 @@
 
   <groupId>com.pabaumgartner</groupId>
   <artifactId>photo-gallery-wizard</artifactId>
-  <version>1.0.2</version>
+  <version>1.0.3-SNAPSHOT</version>
 
   <name>photo-gallery-wizard</name>
   <description>A wizard application for setting up and managing photo galleries</description>
