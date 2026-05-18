@@ -7,8 +7,6 @@ import dev.tamboui.style.Color;
 import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.FormFieldElement;
-import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.widgets.input.TextInputState;
 
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.BORDER_MUTED;
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.ERROR_GLOW;
@@ -36,7 +34,7 @@ final class PhotoGalleryWizardUi {
 	private PhotoGalleryWizardUi() {
 	}
 
-	static FormFieldElement textField(FormFieldElement field, Color accent, TextInputState state) {
+	static FormFieldElement textField(FormFieldElement field, Color accent) {
 		return field.labelWidth(LABEL_WIDTH)
 			.labelStyle(Style.create().fg(readableText(accent, SURFACE_ALT)).bold())
 			.errorStyle(Style.create().fg(readableText(ERROR_GLOW, SURFACE_ALT)).bold())
@@ -44,19 +42,7 @@ final class PhotoGalleryWizardUi {
 			.borderColor(BORDER_MUTED)
 			.focusedBorderColor(accent)
 			.errorBorderColor(ERROR_GLOW)
-			.arrowNavigation(true)
-			.onKeyEvent(event -> windowsBackspaceWorkaround(event, state));
-	}
-
-	// Workaround for https://github.com/tamboui/tamboui/issues/302
-	// On Windows, Backspace sends BS (char 8) which TamboUI maps to Ctrl+H
-	// instead of KeyCode.BACKSPACE. Intercept Ctrl+H and treat it as backspace.
-	private static EventResult windowsBackspaceWorkaround(dev.tamboui.tui.event.KeyEvent event, TextInputState state) {
-		if (event.hasCtrl() && event.isChar('h')) {
-			state.deleteBackward();
-			return EventResult.HANDLED;
-		}
-		return EventResult.UNHANDLED;
+			.arrowNavigation(true);
 	}
 
 	static FormFieldElement booleanField(FormFieldElement field, Color accent) {
