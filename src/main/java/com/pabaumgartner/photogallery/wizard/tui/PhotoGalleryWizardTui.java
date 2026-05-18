@@ -527,28 +527,28 @@ public class PhotoGalleryWizardTui {
 		var textState = form.textField("schoolClassName");
 		return PhotoGalleryWizardUi.textField(formField(" Klassenname", textState).id("schoolClassName")
 			.placeholder("z. B. GS1d BA")
-			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
+			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON);
 	}
 
 	private FormFieldElement eventCodeField() {
 		var textState = form.textField("schoolEventCode");
 		return PhotoGalleryWizardUi.textField(formField(" Event-Code", textState).id("schoolEventCode")
 			.placeholder("AB12")
-			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
+			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON);
 	}
 
 	private FormFieldElement shootingDateField() {
 		var textState = form.textField("schoolShootingDate");
 		return PhotoGalleryWizardUi.textField(formField(" Shooting-Datum", textState).id("schoolShootingDate")
 			.placeholder("25.03.2026")
-			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
+			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON);
 	}
 
 	private FormFieldElement codeCountField() {
 		var textState = form.textField("schoolCodeCount");
 		return PhotoGalleryWizardUi.textField(formField(" Anzahl Codes", textState).id("schoolCodeCount")
 			.placeholder("17")
-			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON, textState);
+			.onSubmit(this::advanceSchulfotosStep), CYAN_NEON);
 	}
 
 	private FormFieldElement picPeakEnabledField() {
