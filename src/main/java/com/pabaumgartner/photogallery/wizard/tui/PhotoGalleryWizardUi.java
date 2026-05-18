@@ -8,7 +8,6 @@ import dev.tamboui.style.Style;
 import dev.tamboui.toolkit.element.Element;
 import dev.tamboui.toolkit.elements.FormFieldElement;
 import dev.tamboui.toolkit.event.EventResult;
-import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.widgets.input.TextInputState;
 
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.BORDER_MUTED;
@@ -53,7 +52,7 @@ final class PhotoGalleryWizardUi {
 	// On Windows, Backspace sends BS (char 8) which TamboUI maps to Ctrl+H
 	// instead of KeyCode.BACKSPACE. Intercept Ctrl+H and treat it as backspace.
 	private static EventResult windowsBackspaceWorkaround(dev.tamboui.tui.event.KeyEvent event, TextInputState state) {
-		if (event.code() == KeyCode.CHAR && event.hasCtrl() && event.character() == 'h') {
+		if (event.hasCtrl() && event.isChar('h')) {
 			state.deleteBackward();
 			return EventResult.HANDLED;
 		}
