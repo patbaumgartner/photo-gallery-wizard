@@ -25,7 +25,7 @@
     <sortpom-maven-plugin.version>4.0.0</sortpom-maven-plugin.version>
     <spring-javaformat-maven-plugin.version>0.0.47</spring-javaformat-maven-plugin.version>
     <taikai.version>1.64.0</taikai.version>
-    <tamboui.version>0.3.0</tamboui.version>
+    <tamboui.version>0.4.0</tamboui.version>
     <zxing.version>3.5.4</zxing.version>
   </properties>
 
