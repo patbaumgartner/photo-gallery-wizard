@@ -280,16 +280,16 @@
             <executions>
               <execution>
                 <id>remove-deprecated-native-proxy-configs</id>
-                <phase>prepare-package</phase>
                 <goals>
                   <goal>run</goal>
                 </goals>
+                <phase>prepare-package</phase>
                 <configuration>
                   <target>
                     <delete includeemptydirs="false">
                       <fileset dir="${project.build.outputDirectory}">
-                        <include name="META-INF/native-image/org.jline/**/proxy-config.json" />
-                        <include name="META-INF/native-image/org.hibernate.validator/**/proxy-config.json" />
+                        <include name="META-INF/native-image/org.jline/**/proxy-config.json"></include>
+                        <include name="META-INF/native-image/org.hibernate.validator/**/proxy-config.json"></include>
                       </fileset>
                     </delete>
                   </target>
