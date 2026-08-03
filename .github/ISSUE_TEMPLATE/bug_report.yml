@@ -1,0 +1,65 @@
+name: Bug report
+description: Report something that does not work as documented.
+labels: [ bug ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please search the existing
+        issues first — it saves everyone a round trip.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: What did you expect, and what did you get instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The wizard step you were on and what you entered or selected.
+      placeholder: |
+        1. Start the wizard
+        2. On step 5 (Watermark), select the event folder "…"
+        3. Press Enter
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output
+      description: >-
+        The relevant part of `logs/photo-gallery-wizard.log`. Please remove any
+        passwords, gallery codes and share links before pasting.
+      render: text
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "1.0.2, or the commit you built from"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: distribution
+    attributes:
+      label: How do you run it?
+      options:
+        - JAR
+        - Native binary
+        - From source (./mvnw spring-boot:run)
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and Java version
+      placeholder: "macOS 15.3, Temurin 25.0.2"
+    validations:
+      required: true

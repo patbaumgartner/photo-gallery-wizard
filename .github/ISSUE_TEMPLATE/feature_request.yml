@@ -1,0 +1,26 @@
+name: Feature request
+description: Suggest a change to the wizard workflow or its output.
+labels: [ enhancement ]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: >-
+        Describe the situation you run into during a shoot, not the solution you
+        have in mind. That makes it much easier to find the right change.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What have you tried instead?
+      description: Existing configuration properties, manual workarounds, other tools.
