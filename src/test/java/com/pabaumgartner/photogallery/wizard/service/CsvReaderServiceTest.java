@@ -225,4 +225,57 @@ class CsvReaderServiceTest {
 		assertThat(result.eventName()).isEqualTo("Test");
 	}
 
+	@Test
+	void readCodesKeepsValidRowsWhenOneRowIsTruncated() throws IOException {
+		Path csv = tempDir.resolve("ragged.csv");
+		String content = """
+				Number,Code,Password,Class Name,URL,PicPeak Event ID
+				1,ABCD-1234-WXYZ,pw1,3a,https://example.com/?code=ABCD-1234-WXYZ,10
+				2,ABCD-5678-STUV
+				3,ABCD-9012-MNOP,pw3,3a,https://example.com/?code=ABCD-9012-MNOP,12
+				""";
+		Files.writeString(csv, content, StandardCharsets.UTF_8);
+
+		CsvReadResult result = service.readCodes(csv);
+
+		assertThat(result.codes()).extracting(GalleryCode::code)
+			.containsExactly("ABCD-1234-WXYZ", "ABCD-5678-STUV", "ABCD-9012-MNOP");
+		assertThat(result.codes().get(1).password()).isEmpty();
+		assertThat(result.codes().get(1).picPeakEventId()).isZero();
+		assertThat(result.codes().get(2).picPeakEventId()).isEqualTo(12);
+		assertThat(result.eventName()).isEqualTo("3a");
+	}
+
+	@Test
+	void readCodesHandlesHeaderColumnsInAnyOrder() throws IOException {
+		Path csv = tempDir.resolve("reordered.csv");
+		String content = """
+				PicPeak Event ID,Class Name,Code,URL,Password
+				77,3b,ABCD-1234-WXYZ,https://example.com/share,pw1
+				""";
+		Files.writeString(csv, content, StandardCharsets.UTF_8);
+
+		CsvReadResult result = service.readCodes(csv);
+
+		assertThat(result.eventName()).isEqualTo("3b");
+		assertThat(result.codes()).singleElement()
+			.satisfies(code -> assertThat(code.picPeakEventId()).isEqualTo(77))
+			.satisfies(code -> assertThat(code.password()).isEqualTo("pw1"))
+			.satisfies(code -> assertThat(code.shareUrl()).isEqualTo("https://example.com/share"));
+	}
+
+	@Test
+	void readCodesKeepsRowWhenPicPeakEventIdIsNotANumber() throws IOException {
+		Path csv = tempDir.resolve("bad-id.csv");
+		String content = """
+				Number,Code,Password,Class Name,URL,PicPeak Event ID
+				1,ABCD-1234-WXYZ,pw1,3a,https://example.com,not-a-number
+				""";
+		Files.writeString(csv, content, StandardCharsets.UTF_8);
+
+		CsvReadResult result = service.readCodes(csv);
+
+		assertThat(result.codes()).singleElement().satisfies(code -> assertThat(code.picPeakEventId()).isZero());
+	}
+
 }

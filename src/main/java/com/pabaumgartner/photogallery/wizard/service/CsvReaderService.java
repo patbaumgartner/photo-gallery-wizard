@@ -1,6 +1,5 @@
 package com.pabaumgartner.photogallery.wizard.service;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
@@ -24,46 +23,50 @@ public class CsvReaderService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CsvReaderService.class);
 
-	private static final String LEGACY_EVENT_NAME_HEADER = "Event Name";
+	private static final String NUMBER_HEADER = "Number";
+
+	private static final String CODE_HEADER = "Code";
+
+	private static final String PASSWORD_HEADER = "Password";
 
 	private static final String CLASS_NAME_HEADER = "Class Name";
+
+	private static final String LEGACY_EVENT_NAME_HEADER = "Event Name";
+
+	private static final String URL_HEADER = "URL";
+
+	private static final String PIC_PEAK_EVENT_ID_HEADER = "PicPeak Event ID";
+
+	private static final String BYTE_ORDER_MARK = "\uFEFF";
 
 	public CsvReadResult readCodes(Path csvFile) throws IOException {
 		if (!Files.exists(csvFile)) {
 			throw new IOException("CSV file not found: " + csvFile.toAbsolutePath());
 		}
 
+		CSVFormat format = CSVFormat.DEFAULT.builder().setIgnoreEmptyLines(true).setTrim(true).get();
+
 		LinkedHashSet<String> seenCodes = new LinkedHashSet<>();
 		List<GalleryCode> codes = new ArrayList<>();
 		String eventName = "";
-		boolean hasHeader = hasHeaderRow(csvFile);
-
-		CSVFormat.Builder formatBuilder = CSVFormat.DEFAULT.builder().setIgnoreEmptyLines(true).setTrim(true);
-		if (hasHeader) {
-			formatBuilder.setSkipHeaderRecord(true).setHeader();
-		}
-		CSVFormat format = formatBuilder.get();
+		Columns columns = Columns.positional();
+		boolean firstRecord = true;
 
 		try (Reader reader = Files.newBufferedReader(csvFile, StandardCharsets.UTF_8);
 				CSVParser parser = format.parse(reader)) {
-
-			boolean hasCodeColumn = hasHeader && parser.getHeaderNames().contains("Code");
-			String nameHeader = resolveNameHeader(hasHeader, parser);
-			boolean hasPasswordColumn = hasHeader && parser.getHeaderNames().contains("Password");
-			boolean hasUrlColumn = hasHeader && parser.getHeaderNames().contains("URL");
-			boolean hasPicPeakEventIdColumn = hasHeader && parser.getHeaderNames().contains("PicPeak Event ID");
-
 			for (CSVRecord record : parser) {
-				if (record.size() == 0) {
-					continue;
+				List<String> values = values(record);
+				if (firstRecord) {
+					firstRecord = false;
+					if (Columns.isHeaderRow(values)) {
+						columns = Columns.fromHeader(values);
+						continue;
+					}
 				}
 
-				String rawCode = hasCodeColumn ? record.get("Code").trim() : record.get(0).trim();
-				if (nameHeader != null && eventName.isEmpty()) {
-					eventName = record.get(nameHeader).trim();
-				}
-				if (rawCode.startsWith("\uFEFF")) {
-					rawCode = rawCode.substring(1);
+				String rawCode = columns.code(values);
+				if (eventName.isEmpty()) {
+					eventName = columns.eventName(values);
 				}
 				if (rawCode.isBlank()) {
 					continue;
@@ -76,22 +79,13 @@ public class CsvReaderService {
 					LOGGER.warn("Skipping duplicate gallery code at line {}: '{}'", record.getRecordNumber(), rawCode);
 					continue;
 				}
-
-				String password = hasPasswordColumn ? record.get("Password").trim() : "";
-				String shareUrl = hasUrlColumn ? record.get("URL").trim() : "";
-				int picPeakEventId = 0;
-				if (hasPicPeakEventIdColumn) {
-					String idStr = record.get("PicPeak Event ID").trim();
-					if (!idStr.isEmpty()) {
-						try {
-							picPeakEventId = Integer.parseInt(idStr);
-						}
-						catch (NumberFormatException ex) {
-							LOGGER.debug("Invalid PicPeak Event ID at line {}: '{}'", record.getRecordNumber(), idStr);
-						}
-					}
+				if (columns.isIncomplete(values)) {
+					LOGGER.warn("Row at line {} has only {} columns; missing values are read as empty",
+							record.getRecordNumber(), values.size());
 				}
-				codes.add(new GalleryCode(rawCode, password, shareUrl, picPeakEventId));
+
+				codes.add(new GalleryCode(rawCode, columns.password(values), columns.url(values),
+						columns.picPeakEventId(values, record.getRecordNumber())));
 			}
 		}
 
@@ -99,30 +93,72 @@ public class CsvReaderService {
 		return new CsvReadResult(eventName, codes);
 	}
 
-	private String resolveNameHeader(boolean hasHeader, CSVParser parser) {
-		if (!hasHeader) {
-			return null;
+	private static List<String> values(CSVRecord record) {
+		List<String> values = new ArrayList<>(record.size());
+		for (int i = 0; i < record.size(); i++) {
+			String value = record.get(i).trim();
+			values.add(i == 0 && value.startsWith(BYTE_ORDER_MARK) ? value.substring(1) : value);
 		}
-		if (parser.getHeaderNames().contains(CLASS_NAME_HEADER)) {
-			return CLASS_NAME_HEADER;
-		}
-		if (parser.getHeaderNames().contains(LEGACY_EVENT_NAME_HEADER)) {
-			return LEGACY_EVENT_NAME_HEADER;
-		}
-		return null;
+		return values;
 	}
 
-	private boolean hasHeaderRow(Path csvFile) throws IOException {
-		try (BufferedReader br = Files.newBufferedReader(csvFile, StandardCharsets.UTF_8)) {
-			String firstLine = br.readLine();
-			if (firstLine == null) {
-				return false;
-			}
-			if (firstLine.startsWith("\uFEFF")) {
-				firstLine = firstLine.substring(1);
-			}
-			return firstLine.startsWith("Number,");
+	private record Columns(int code, int password, int eventName, int url, int picPeakEventId, int expectedSize) {
+
+		private static Columns positional() {
+			return new Columns(0, -1, -1, -1, -1, 1);
 		}
+
+		private static boolean isHeaderRow(List<String> values) {
+			return values.contains(CODE_HEADER) || (!values.isEmpty() && NUMBER_HEADER.equals(values.getFirst()));
+		}
+
+		private static Columns fromHeader(List<String> header) {
+			int nameIndex = header.indexOf(CLASS_NAME_HEADER);
+			if (nameIndex < 0) {
+				nameIndex = header.indexOf(LEGACY_EVENT_NAME_HEADER);
+			}
+			return new Columns(Math.max(header.indexOf(CODE_HEADER), 0), header.indexOf(PASSWORD_HEADER), nameIndex,
+					header.indexOf(URL_HEADER), header.indexOf(PIC_PEAK_EVENT_ID_HEADER), header.size());
+		}
+
+		private boolean isIncomplete(List<String> values) {
+			return values.size() < expectedSize;
+		}
+
+		private String code(List<String> values) {
+			return valueAt(values, code);
+		}
+
+		private String password(List<String> values) {
+			return valueAt(values, password);
+		}
+
+		private String eventName(List<String> values) {
+			return valueAt(values, eventName);
+		}
+
+		private String url(List<String> values) {
+			return valueAt(values, url);
+		}
+
+		private int picPeakEventId(List<String> values, long lineNumber) {
+			String raw = valueAt(values, picPeakEventId);
+			if (raw.isEmpty()) {
+				return 0;
+			}
+			try {
+				return Integer.parseInt(raw);
+			}
+			catch (NumberFormatException ex) {
+				LOGGER.warn("Invalid PicPeak Event ID at line {}: '{}'", lineNumber, raw);
+				return 0;
+			}
+		}
+
+		private static String valueAt(List<String> values, int index) {
+			return index >= 0 && index < values.size() ? values.get(index) : "";
+		}
+
 	}
 
 }
