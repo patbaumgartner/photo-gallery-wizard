@@ -1,5 +1,7 @@
 package com.pabaumgartner.photogallery.wizard.config;
 
+import java.util.regex.Pattern;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app.schulfotos")
@@ -7,6 +9,8 @@ public record SchulfotosProperties(String baseUrl, String galleryUrl, int defaul
 		int gridRows, boolean showCuttingLines, String galleryCodeLabel, String galleryPasswordLabel, String outputDir,
 		String codeCharset, String logoPath, String klassenfotoFolder, String portraitPrefix, String watermarkedSuffix,
 		int passwordLength) {
+
+	private static final Pattern PATH_SEPARATORS = Pattern.compile("[\\\\/]|(^|[\\\\/])\\.{1,2}([\\\\/]|$)");
 
 	public SchulfotosProperties {
 		if (baseUrl == null || baseUrl.isBlank()) {
@@ -53,6 +57,16 @@ public record SchulfotosProperties(String baseUrl, String galleryUrl, int defaul
 		}
 		if (passwordLength <= 0) {
 			passwordLength = 9;
+		}
+		requireSingleSegment("app.schulfotos.klassenfoto-folder", klassenfotoFolder);
+		requireSingleSegment("app.schulfotos.portrait-prefix", portraitPrefix);
+		requireSingleSegment("app.schulfotos.watermarked-suffix", watermarkedSuffix);
+	}
+
+	private static void requireSingleSegment(String property, String value) {
+		if (PATH_SEPARATORS.matcher(value).find()) {
+			throw new IllegalArgumentException(
+					property + " must be a plain folder-name fragment without path separators, got: '" + value + "'");
 		}
 	}
 

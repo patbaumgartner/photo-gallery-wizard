@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class FolderStructureServiceTest {
 
@@ -183,6 +184,63 @@ class FolderStructureServiceTest {
 		List<Path> folders = service.listEventFolders(tempDir);
 
 		assertThat(folders).extracting(p -> p.getFileName().toString()).contains("SplitEvent");
+	}
+
+	@Test
+	void safeSegmentReplacesSeparatorsAndCharactersRejectedByWindows() {
+		assertThat(FolderStructureService.safeSegment("3a/4b", "fallback")).isEqualTo("3a-4b");
+		assertThat(FolderStructureService.safeSegment("3a\\4b", "fallback")).isEqualTo("3a-4b");
+		assertThat(FolderStructureService.safeSegment("C:name*?\"<>|", "fallback")).isEqualTo("C-name------");
+		assertThat(FolderStructureService.safeSegment("tab\there", "fallback")).isEqualTo("tab-here");
+	}
+
+	@Test
+	void safeSegmentFallsBackForNamesThatWouldEscapeOrBreakTheFilesystem() {
+		assertThat(FolderStructureService.safeSegment("..", "fallback")).isEqualTo("fallback");
+		assertThat(FolderStructureService.safeSegment(".", "fallback")).isEqualTo("fallback");
+		assertThat(FolderStructureService.safeSegment("   ", "fallback")).isEqualTo("fallback");
+		assertThat(FolderStructureService.safeSegment(null, "fallback")).isEqualTo("fallback");
+		assertThat(FolderStructureService.safeSegment("../../etc", "fallback")).isEqualTo("..-..-etc");
+	}
+
+	@Test
+	void safeSegmentFallsBackForWindowsReservedDeviceNames() {
+		assertThat(FolderStructureService.safeSegment("CON", "fallback")).isEqualTo("fallback");
+		assertThat(FolderStructureService.safeSegment("nul", "fallback")).isEqualTo("fallback");
+		assertThat(FolderStructureService.safeSegment("LPT1.txt", "fallback")).isEqualTo("fallback");
+		assertThat(FolderStructureService.safeSegment("CONSOLE", "fallback")).isEqualTo("CONSOLE");
+	}
+
+	@Test
+	void safeSegmentTrimsTrailingDotsAndSpacesAndCapsLength() {
+		assertThat(FolderStructureService.safeSegment("class 3a. ", "fallback")).isEqualTo("class 3a");
+		assertThat(FolderStructureService.safeSegment("x".repeat(250), "fallback")).hasSize(100);
+	}
+
+	@Test
+	void createFolderStructureRefusesEventNamesThatEscapeTheOutputDirectory() throws IOException {
+		Path outputDir = tempDir.resolve("schulfotos");
+		Files.createDirectories(outputDir);
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ"));
+
+		assertThatThrownBy(() -> service.createFolderStructure(outputDir, "..", codes)).isInstanceOf(IOException.class)
+			.hasMessageContaining("would escape");
+		assertThatThrownBy(() -> service.createFolderStructure(outputDir, "../escaped", codes))
+			.isInstanceOf(IOException.class)
+			.hasMessageContaining("would escape");
+
+		assertThat(tempDir.resolve("klassenfoto")).doesNotExist();
+		assertThat(tempDir.resolve("escaped")).doesNotExist();
+	}
+
+	@Test
+	void createFolderStructureRefusesNestedEventNames() throws IOException {
+		Path outputDir = tempDir.resolve("schulfotos");
+		Files.createDirectories(outputDir);
+
+		assertThatThrownBy(() -> service.createFolderStructure(outputDir, "a/b", List.of()))
+			.isInstanceOf(IOException.class)
+			.hasMessageContaining("would escape");
 	}
 
 }

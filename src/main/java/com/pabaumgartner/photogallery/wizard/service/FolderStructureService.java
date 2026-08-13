@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import com.pabaumgartner.photogallery.wizard.config.SchulfotosProperties;
 import com.pabaumgartner.photogallery.wizard.model.GalleryCode;
@@ -18,6 +20,13 @@ public class FolderStructureService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(FolderStructureService.class);
 
+	private static final Pattern UNSAFE_CHARACTERS = Pattern.compile("[\\\\/:*?\"<>|\\p{Cntrl}]");
+
+	private static final Pattern WINDOWS_RESERVED_NAMES = Pattern
+		.compile("(?i)^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\\..*)?$");
+
+	private static final int MAX_SEGMENT_LENGTH = 100;
+
 	private final String klassenfotoFolder;
 
 	private final String portraitPrefix;
@@ -25,6 +34,25 @@ public class FolderStructureService {
 	public FolderStructureService(SchulfotosProperties schulfotosProperties) {
 		this.klassenfotoFolder = schulfotosProperties.klassenfotoFolder();
 		this.portraitPrefix = schulfotosProperties.portraitPrefix();
+	}
+
+	/**
+	 * Reduces untrusted text (a class name read from a CSV) to a single directory name
+	 * that is safe and portable across Linux, macOS and Windows.
+	 */
+	public static String safeSegment(String value, String fallback) {
+		String candidate = value == null ? "" : Normalizer.normalize(value.trim(), Normalizer.Form.NFC);
+		candidate = UNSAFE_CHARACTERS.matcher(candidate).replaceAll("-").strip();
+		if (candidate.length() > MAX_SEGMENT_LENGTH) {
+			candidate = candidate.substring(0, MAX_SEGMENT_LENGTH);
+		}
+		// Trailing dots and spaces are silently dropped by Windows, and stripping them
+		// also turns "." and ".." into the fallback instead of a directory traversal.
+		candidate = candidate.replaceAll("[. ]+$", "");
+		if (candidate.isEmpty() || WINDOWS_RESERVED_NAMES.matcher(candidate).matches()) {
+			return fallback;
+		}
+		return candidate;
 	}
 
 	public List<Path> listCsvFiles(Path schulfotosDir) throws IOException {
@@ -82,6 +110,11 @@ public class FolderStructureService {
 	public List<Path> createFolderStructure(Path schulfotosDir, String eventName, List<GalleryCode> codes)
 			throws IOException {
 		Path eventDir = schulfotosDir.resolve(eventName);
+		Path expectedParent = schulfotosDir.toAbsolutePath().normalize();
+		if (!expectedParent.equals(eventDir.toAbsolutePath().normalize().getParent())) {
+			throw new IOException("Refusing to create '" + eventName + "': it would escape " + expectedParent);
+		}
+
 		List<Path> createdFolders = new ArrayList<>();
 
 		Path klassenfotoDir = eventDir.resolve(klassenfotoFolder);

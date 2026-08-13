@@ -657,11 +657,11 @@ public class PhotoGalleryWizardTui {
 	}
 
 	private String sanitizeFolderNameSegment(String value, String fallback) {
-		return blankFallback(value, fallback).trim().replace("/", "-").replace("\\", "-");
+		return FolderStructureService.safeSegment(value, fallback);
 	}
 
 	private String sanitizeFileNameSegment(String value, String fallback) {
-		return sanitizeFolderNameSegment(value, fallback).replace(" ", "-");
+		return FolderStructureService.safeSegment(value, fallback).replace(" ", "-");
 	}
 
 	private String normalizeEventCode(String value) {
