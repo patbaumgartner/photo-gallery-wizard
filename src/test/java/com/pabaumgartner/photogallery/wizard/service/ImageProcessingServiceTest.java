@@ -6,6 +6,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 
 import javax.imageio.ImageIO;
 
@@ -123,6 +124,65 @@ class ImageProcessingServiceTest {
 	}
 
 	@Test
+	void processEventFoldersRemovesOutputsWhoseSourceDisappeared() throws IOException {
+		Path eventDir = tempDir.resolve("event");
+		createTestImage(eventDir.resolve("portrait-1"), "current.jpg", 800, 600);
+		createTestImage(eventDir.resolve("portrait-1-watermarked"), "removed-student.jpg", 800, 600);
+		Path wm = createWatermark(200, 100);
+
+		service.processEventFolders(eventDir, wm, 1200);
+
+		Path outputDir = eventDir.resolve("portrait-1-watermarked");
+		assertThat(outputDir.resolve("current.jpg")).exists();
+		assertThat(outputDir.resolve("removed-student.jpg")).doesNotExist();
+	}
+
+	@Test
+	void processEventFoldersFailsWhenTwoSourcesWouldProduceTheSameOutputFile() throws IOException {
+		Path eventDir = tempDir.resolve("event");
+		Path sourceDir = eventDir.resolve("klassenfoto");
+		createTestImage(sourceDir, "portrait.jpg", 800, 600);
+		BufferedImage png = new BufferedImage(800, 600, BufferedImage.TYPE_INT_ARGB);
+		ImageIO.write(png, "png", sourceDir.resolve("portrait.png").toFile());
+		Path wm = createWatermark(200, 100);
+
+		assertThatThrownBy(() -> service.processEventFolders(eventDir, wm, 1200)).isInstanceOf(IOException.class)
+			.hasMessageContaining("would overwrite each other")
+			.hasMessageContaining("portrait.jpg");
+	}
+
+	@Test
+	void processEventFoldersFailsWhenStrippedPostfixCollidesWithAnotherSource() throws IOException {
+		Path eventDir = tempDir.resolve("event");
+		Path sourceDir = eventDir.resolve("klassenfoto");
+		createTestImage(sourceDir, "MEL_6175.jpg", 800, 600);
+		createTestImage(sourceDir, "MEL_6175_NEU.jpg", 800, 600);
+		Path wm = createWatermark(200, 100);
+
+		assertThatThrownBy(() -> service.processEventFolders(eventDir, wm, 1200)).isInstanceOf(IOException.class)
+			.hasMessageContaining("MEL_6175.jpg");
+	}
+
+	@Test
+	void processEventFoldersLeavesPreviousOutputIntactWhenAnImageCannotBeRead() throws IOException {
+		Path eventDir = tempDir.resolve("event");
+		Path sourceDir = eventDir.resolve("klassenfoto");
+		createTestImage(sourceDir, "good.jpg", 800, 600);
+		service.processEventFolders(eventDir, createWatermark(200, 100), 1200);
+
+		Files.writeString(sourceDir.resolve("broken.jpg"), "not an image");
+
+		assertThatThrownBy(() -> service.processEventFolders(eventDir, createWatermark(200, 100), 1200))
+			.isInstanceOf(IOException.class)
+			.hasMessageContaining("Could not read image");
+		assertThat(eventDir.resolve("klassenfotos-watermarked").resolve("good.jpg")).exists();
+		try (Stream<Path> entries = Files.list(eventDir)) {
+			assertThat(entries.map(path -> path.getFileName().toString()))
+				.noneSatisfy(name -> assertThat(name).startsWith(".staging-"));
+		}
+	}
+
+	@Test
 	void processEventFoldersEmptyDirectoryReturnsZero() throws IOException {
 		Path eventDir = tempDir.resolve("empty-event");
 		Files.createDirectories(eventDir);
@@ -205,6 +265,21 @@ class ImageProcessingServiceTest {
 
 		assertThat(result.totalProcessed()).isEqualTo(3);
 		assertThat(result.outputFolders()).hasSize(3);
+	}
+
+	@Test
+	void processEventFoldersIgnoresHiddenSidecarFilesInsteadOfFailingOnThem() throws IOException {
+		Path eventDir = tempDir.resolve("event");
+		Path sourceDir = eventDir.resolve("klassenfoto");
+		createTestImage(sourceDir, "class1.jpg", 800, 600);
+		Files.writeString(sourceDir.resolve("._class1.jpg"), "macOS AppleDouble sidecar");
+		Files.writeString(sourceDir.resolve(".DS_Store"), "finder metadata");
+		Path wm = createWatermark(200, 100);
+
+		ImageProcessingService.ImageProcessingResult result = service.processEventFolders(eventDir, wm, 1200);
+
+		assertThat(result.totalProcessed()).isEqualTo(1);
+		assertThat(eventDir.resolve("klassenfotos-watermarked").resolve("class1.jpg")).exists();
 	}
 
 	@Test

@@ -10,9 +10,13 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -65,48 +69,22 @@ public class ImageProcessingService {
 			Consumer<ProcessingProgress> progressListener) throws IOException {
 		progressListener.accept(new ProcessingProgress(0.05d, "Wasserzeichen laden"));
 		BufferedImage watermark = loadWatermark(watermarkImagePath);
-		int totalProcessed = 0;
-		List<Path> outputFolders = new ArrayList<>();
-
-		List<Path> inputImages = collectInputImages(eventDir);
-		int totalImages = Math.max(inputImages.size(), 1);
-		int processedSoFar = 0;
 
 		progressListener.accept(new ProcessingProgress(0.10d, "Fotoordner analysieren"));
+		List<Path> sourceFolders = collectSourceFolders(eventDir);
+		int totalImages = Math.max(countImages(sourceFolders), 1);
 
-		Path klassenfotoDir = eventDir.resolve(klassenfotoFolder);
-		if (Files.isDirectory(klassenfotoDir)) {
-			Path outputDir = eventDir.resolve(klassenfotoFolder + "s" + watermarkedSuffix);
-			int count = resizeAndWatermarkFolder(klassenfotoDir, outputDir, watermark, maxEdge, (done, file) -> {
-				double ratio = (double) done / totalImages;
-				progressListener.accept(new ProcessingProgress(0.10d + 0.85d * ratio, "Bilder werden verarbeitet"));
-			}, processedSoFar);
+		int totalProcessed = 0;
+		List<Path> outputFolders = new ArrayList<>();
+		for (Path sourceDir : sourceFolders) {
+			Path outputDir = watermarkedOutputDir(eventDir, sourceDir);
+			int count = resizeAndWatermarkFolder(sourceDir, outputDir, watermark, maxEdge, totalProcessed, totalImages,
+					progressListener);
 			totalProcessed += count;
-			processedSoFar += count;
 			if (count > 0) {
 				outputFolders.add(outputDir);
 			}
-			LOGGER.info("Processed {} class photos from {}", count, klassenfotoDir);
-		}
-
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(eventDir, Files::isDirectory)) {
-			for (Path sub : stream) {
-				String name = sub.getFileName().toString();
-				if (name.startsWith(portraitPrefix) && !name.endsWith(watermarkedSuffix)) {
-					Path outputDir = eventDir.resolve(name + watermarkedSuffix);
-					int count = resizeAndWatermarkFolder(sub, outputDir, watermark, maxEdge, (done, file) -> {
-						double ratio = (double) done / totalImages;
-						progressListener
-							.accept(new ProcessingProgress(0.10d + 0.85d * ratio, "Bilder werden verarbeitet"));
-					}, processedSoFar);
-					totalProcessed += count;
-					processedSoFar += count;
-					if (count > 0) {
-						outputFolders.add(outputDir);
-					}
-					LOGGER.info("Processed {} portrait photos from {}", count, sub);
-				}
-			}
+			LOGGER.info("Processed {} photos from {}", count, sourceDir);
 		}
 
 		LOGGER.info("Total: processed {} images under {}", totalProcessed, eventDir);
@@ -114,57 +92,118 @@ public class ImageProcessingService {
 		return new ImageProcessingResult(totalProcessed, outputFolders);
 	}
 
-	private int resizeAndWatermarkFolder(Path sourceDir, Path outputDir, BufferedImage watermark, int maxEdge,
-			ProgressImageListener listener, int alreadyProcessed) throws IOException {
-		if (!Files.isDirectory(sourceDir)) {
-			return 0;
+	private Path watermarkedOutputDir(Path eventDir, Path sourceDir) {
+		String name = sourceDir.getFileName().toString();
+		if (name.equals(klassenfotoFolder)) {
+			return eventDir.resolve(klassenfotoFolder + "s" + watermarkedSuffix);
 		}
-		Files.createDirectories(outputDir);
-		int count = 0;
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(sourceDir, this::isImageFile)) {
-			for (Path imageFile : stream) {
-				BufferedImage original = ImageIO.read(imageFile.toFile());
-				if (original == null) {
-					LOGGER.warn("Could not read image: {}", imageFile);
-					continue;
-				}
-				BufferedImage resized = resize(original, maxEdge);
-				BufferedImage result = applyWatermark(resized, watermark);
-
-				String outputName = changeExtension(stripPostfix(imageFile.getFileName().toString()), "jpg");
-				Path outputFile = outputDir.resolve(outputName);
-				writeJpeg(result, outputFile);
-				count++;
-				listener.onImageDone(alreadyProcessed + count, imageFile.getFileName().toString());
-			}
-		}
-		return count;
+		return eventDir.resolve(name + watermarkedSuffix);
 	}
 
-	private List<Path> collectInputImages(Path eventDir) throws IOException {
-		List<Path> images = new ArrayList<>();
+	private List<Path> collectSourceFolders(Path eventDir) throws IOException {
+		List<Path> folders = new ArrayList<>();
 		Path klassenfotoDir = eventDir.resolve(klassenfotoFolder);
 		if (Files.isDirectory(klassenfotoDir)) {
-			images.addAll(listImageFiles(klassenfotoDir));
+			folders.add(klassenfotoDir);
 		}
+		if (!Files.isDirectory(eventDir)) {
+			return folders;
+		}
+		List<Path> portraitFolders = new ArrayList<>();
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(eventDir, Files::isDirectory)) {
 			for (Path sub : stream) {
 				String name = sub.getFileName().toString();
 				if (name.startsWith(portraitPrefix) && !name.endsWith(watermarkedSuffix)) {
-					images.addAll(listImageFiles(sub));
+					portraitFolders.add(sub);
 				}
 			}
 		}
-		return images;
+		portraitFolders.sort(Path::compareTo);
+		folders.addAll(portraitFolders);
+		return folders;
+	}
+
+	private int countImages(List<Path> sourceFolders) throws IOException {
+		int total = 0;
+		for (Path folder : sourceFolders) {
+			total += listImageFiles(folder).size();
+		}
+		return total;
+	}
+
+	private int resizeAndWatermarkFolder(Path sourceDir, Path outputDir, BufferedImage watermark, int maxEdge,
+			int alreadyProcessed, int totalImages, Consumer<ProcessingProgress> progressListener) throws IOException {
+		List<Path> sources = listImageFiles(sourceDir);
+		if (sources.isEmpty()) {
+			return 0;
+		}
+		Map<String, Path> plan = planOutputNames(sources);
+
+		Path stagingDir = Files.createTempDirectory(outputDir.getParent(), ".staging-");
+		try {
+			int count = 0;
+			for (Map.Entry<String, Path> planned : plan.entrySet()) {
+				BufferedImage original = ImageIO.read(planned.getValue().toFile());
+				if (original == null) {
+					throw new IOException("Could not read image: " + planned.getValue());
+				}
+				BufferedImage result = applyWatermark(resize(original, maxEdge), watermark);
+				writeJpeg(result, stagingDir.resolve(planned.getKey()));
+				count++;
+				double ratio = (double) (alreadyProcessed + count) / totalImages;
+				progressListener.accept(new ProcessingProgress(0.10d + 0.85d * ratio, "Bilder werden verarbeitet"));
+			}
+			replaceDirectory(stagingDir, outputDir);
+			return count;
+		}
+		finally {
+			deleteRecursively(stagingDir);
+		}
+	}
+
+	private Map<String, Path> planOutputNames(List<Path> sources) throws IOException {
+		Map<String, Path> plan = new LinkedHashMap<>();
+		List<String> collisions = new ArrayList<>();
+		for (Path source : sources) {
+			String outputName = changeExtension(stripPostfix(source.getFileName().toString()), "jpg");
+			Path previous = plan.putIfAbsent(outputName, source);
+			if (previous != null) {
+				collisions.add(previous.getFileName() + " + " + source.getFileName() + " -> " + outputName);
+			}
+		}
+		if (!collisions.isEmpty()) {
+			throw new IOException("Source files would overwrite each other: " + String.join(", ", collisions));
+		}
+		return plan;
+	}
+
+	private void replaceDirectory(Path stagingDir, Path outputDir) throws IOException {
+		deleteRecursively(outputDir);
+		Files.move(stagingDir, outputDir);
+	}
+
+	private void deleteRecursively(Path dir) throws IOException {
+		if (!Files.exists(dir)) {
+			return;
+		}
+		try (Stream<Path> paths = Files.walk(dir)) {
+			for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+				Files.deleteIfExists(path);
+			}
+		}
 	}
 
 	private List<Path> listImageFiles(Path sourceDir) throws IOException {
 		List<Path> files = new ArrayList<>();
+		if (!Files.isDirectory(sourceDir)) {
+			return files;
+		}
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(sourceDir, this::isImageFile)) {
 			for (Path file : stream) {
 				files.add(file);
 			}
 		}
+		files.sort(Path::compareTo);
 		return files;
 	}
 
@@ -264,8 +303,12 @@ public class ImageProcessingService {
 	}
 
 	private boolean isImageFile(Path path) {
-		String name = path.getFileName().toString().toLowerCase();
-		return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
+		String name = path.getFileName().toString();
+		if (name.startsWith(".")) {
+			return false;
+		}
+		String lowerCaseName = name.toLowerCase();
+		return lowerCaseName.endsWith(".jpg") || lowerCaseName.endsWith(".jpeg") || lowerCaseName.endsWith(".png");
 	}
 
 	String stripPostfix(String filename) {
@@ -296,13 +339,6 @@ public class ImageProcessingService {
 	}
 
 	public record ProcessingProgress(double percent, String stage) {
-	}
-
-	@FunctionalInterface
-	private interface ProgressImageListener {
-
-		void onImageDone(int done, String file);
-
 	}
 
 }
