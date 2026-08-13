@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -153,32 +154,32 @@ public class PicPeakService {
 		int totalFilesUploaded = 0;
 		List<String> errors = new ArrayList<>();
 		int totalGalleries = Math.max(codes.size(), 1);
-		int activeGalleryIndex = 0;
 
 		for (int i = 0; i < codes.size(); i++) {
-			progressListener.accept(new UploadProgress(0.10d + 0.80d * ((double) i / totalGalleries),
-					"Galerien werden synchronisiert"));
+			int number = i + 1;
+			double galleryProgress = 0.10d + 0.80d * ((double) i / totalGalleries);
+			progressListener.accept(new UploadProgress(galleryProgress, "Galerien werden synchronisiert"));
 			GalleryCode code = codes.get(i);
 			if (code.picPeakEventId() <= 0) {
-				LOGGER.warn("Skipping upload for code #{}: no PicPeak event ID", i + 1);
+				LOGGER.warn("Skipping upload for code #{}: no PicPeak event ID", number);
 				continue;
 			}
 
-			progressListener
-				.accept(new UploadProgress(0.10d + 0.80d * ((double) i / totalGalleries), "Galerie wird bereinigt"));
-			if (!clearEventPhotos(token, code.picPeakEventId())) {
-				errors.add("Failed to clear existing photos in event " + code.picPeakEventId() + " (code #" + (i + 1)
-						+ ")");
-				continue;
-			}
+			// Row N always maps to portrait-N; renumbering around skipped rows would
+			// upload a student's portraits into somebody else's gallery.
+			List<Path> portraitFiles = listImageFiles(eventDir.resolve(portraitPrefix + number + watermarkedSuffix));
 
-			activeGalleryIndex++;
-
-			Path portraitWatermarked = resolvePortraitFolder(eventDir, activeGalleryIndex, i + 1);
-			List<Path> portraitFiles = listImageFiles(portraitWatermarked);
-
+			// Clearing is irreversible, so only ever do it with local photos in hand.
 			if (klassenfotos.isEmpty() && portraitFiles.isEmpty()) {
-				LOGGER.info("No photos to upload for code #{} (event {})", i + 1, code.picPeakEventId());
+				LOGGER.info("No photos to upload for code #{} (event {}); leaving the gallery untouched", number,
+						code.picPeakEventId());
+				continue;
+			}
+
+			progressListener.accept(new UploadProgress(galleryProgress, "Galerie wird bereinigt"));
+			if (!clearEventPhotos(token, code.picPeakEventId())) {
+				errors.add("Failed to clear existing photos in event " + code.picPeakEventId() + " (code #" + number
+						+ ")");
 				continue;
 			}
 
@@ -188,10 +189,10 @@ public class PicPeakService {
 				if (kUploaded > 0) {
 					uploaded += kUploaded;
 					LOGGER.info("Uploaded {} klassenfotos to PicPeak event {} (code #{})", kUploaded,
-							code.picPeakEventId(), i + 1);
+							code.picPeakEventId(), number);
 				}
 				else {
-					errors.add("Failed to upload klassenfotos to event " + code.picPeakEventId() + " (code #" + (i + 1)
+					errors.add("Failed to upload klassenfotos to event " + code.picPeakEventId() + " (code #" + number
 							+ ")");
 				}
 			}
@@ -200,11 +201,11 @@ public class PicPeakService {
 				if (pUploaded > 0) {
 					uploaded += pUploaded;
 					LOGGER.info("Uploaded {} portraits to PicPeak event {} (code #{})", pUploaded,
-							code.picPeakEventId(), i + 1);
+							code.picPeakEventId(), number);
 				}
 				else {
-					errors.add("Failed to upload portraits to event " + code.picPeakEventId() + " (code #" + (i + 1)
-							+ ")");
+					errors.add(
+							"Failed to upload portraits to event " + code.picPeakEventId() + " (code #" + number + ")");
 				}
 			}
 
@@ -213,7 +214,7 @@ public class PicPeakService {
 				totalFilesUploaded += uploaded;
 			}
 			progressListener.accept(
-					new UploadProgress(0.10d + 0.80d * ((double) (i + 1) / totalGalleries), "Galerie abgeschlossen"));
+					new UploadProgress(0.10d + 0.80d * ((double) number / totalGalleries), "Galerie abgeschlossen"));
 		}
 
 		progressListener.accept(new UploadProgress(1.0d, "Upload fertig"));
@@ -230,7 +231,14 @@ public class PicPeakService {
 			return true;
 		}
 
-		List<Integer> photoIds = listEventPhotoIds(token, eventId);
+		Optional<List<Integer>> listing = tryListEventPhotoIds(token, eventId);
+		if (listing.isEmpty()) {
+			LOGGER.error("Could not determine existing photos for event {}; refusing to upload to avoid duplicates",
+					eventId);
+			return false;
+		}
+
+		List<Integer> photoIds = listing.get();
 		if (photoIds.isEmpty()) {
 			LOGGER.info("No existing photos to clear for event {}", eventId);
 			return true;
@@ -276,8 +284,7 @@ public class PicPeakService {
 		}
 	}
 
-	private List<Integer> listEventPhotoIds(String token, int eventId) {
-		List<Integer> ids = new ArrayList<>();
+	private Optional<List<Integer>> tryListEventPhotoIds(String token, int eventId) {
 		try {
 			HttpRequest request = HttpRequest.newBuilder()
 				.uri(URI.create(picPeakProperties.apiUrl() + "/api/admin/events/" + eventId + "/photos"))
@@ -288,16 +295,16 @@ public class PicPeakService {
 			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 			if (response.statusCode() < 200 || response.statusCode() >= 300) {
 				LOGGER.debug("List photos failed for event {} with status {}", eventId, response.statusCode());
-				return ids;
+				return Optional.empty();
 			}
 
-			JsonNode root = objectMapper.readTree(response.body());
-			collectPhotoIds(root, ids);
-			return ids;
+			List<Integer> ids = new ArrayList<>();
+			collectPhotoIds(objectMapper.readTree(response.body()), ids);
+			return Optional.of(ids);
 		}
 		catch (Exception ex) {
 			LOGGER.debug("Could not list photos for event {}: {}", eventId, ex.getMessage());
-			return ids;
+			return Optional.empty();
 		}
 	}
 
@@ -359,14 +366,6 @@ public class PicPeakService {
 			LOGGER.debug("Delete photo endpoint failed ({}): {}", endpoint, ex.getMessage());
 			return false;
 		}
-	}
-
-	private Path resolvePortraitFolder(Path eventDir, int activeGalleryIndex, int absoluteIndex) {
-		Path preferred = eventDir.resolve(portraitPrefix + activeGalleryIndex + watermarkedSuffix);
-		if (Files.isDirectory(preferred)) {
-			return preferred;
-		}
-		return eventDir.resolve(portraitPrefix + absoluteIndex + watermarkedSuffix);
 	}
 
 	private String login() {

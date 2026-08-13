@@ -5,11 +5,16 @@ import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Flow;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLSession;
@@ -197,18 +202,21 @@ class PicPeakServiceTest {
 	}
 
 	@Test
-	void uploadEventPhotosUsesActiveGalleryIndexAfterSkippedCodes() throws IOException {
-		Path portrait = tempDir.resolve("portrait-1-watermarked");
-		Files.createDirectories(portrait);
-		Files.writeString(portrait.resolve("p1.jpg"), "jpeg-bytes");
+	void uploadEventPhotosMapsPortraitFolderToCsvRowEvenWhenEarlierRowsAreSkipped() throws IOException {
+		Files.createDirectories(tempDir.resolve("portrait-1-watermarked"));
+		Files.writeString(tempDir.resolve("portrait-1-watermarked").resolve("wrong.jpg"), "jpeg-bytes");
+		Files.createDirectories(tempDir.resolve("portrait-2-watermarked"));
+		Files.writeString(tempDir.resolve("portrait-2-watermarked").resolve("right-a.jpg"), "jpeg-bytes");
+		Files.writeString(tempDir.resolve("portrait-2-watermarked").resolve("right-b.jpg"), "jpeg-bytes");
 
+		List<RecordedRequest> recorded = new ArrayList<>();
 		List<StubResponse> responses = new ArrayList<>();
 		responses.add(new StubResponse(200, "{\"token\":\"abc123\"}", Map.of()));
 		responses.add(new StubResponse(200, "{}", Map.of()));
 		responses.add(new StubResponse(201, "{}", Map.of()));
 
 		PicPeakService service = new PicPeakService(enabledProperties, defaultSchulfotosProperties(),
-				codeGeneratorService, sequentialHttpClient(responses));
+				codeGeneratorService, recordingHttpClient(responses, recorded));
 		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1111-AAAA", "pass0"),
 				new GalleryCode("ABCD-2222-BBBB", "pass1", "url", 77));
 
@@ -216,11 +224,59 @@ class PicPeakServiceTest {
 
 		assertThat(result.errors()).isEmpty();
 		assertThat(result.galleriesUpdated()).isEqualTo(1);
-		assertThat(result.totalFilesUploaded()).isEqualTo(1);
+		assertThat(result.totalFilesUploaded()).isEqualTo(2);
+		List<String> bodies = uploadBodies(recorded);
+		assertThat(bodies).hasSize(1);
+		assertThat(bodies.getFirst()).contains("right-a.jpg").contains("right-b.jpg").doesNotContain("wrong.jpg");
 	}
 
 	@Test
-	void uploadEventPhotosFallsBackToPerPhotoDeletionWhenBulkClearFails() {
+	void uploadEventPhotosLeavesGalleryUntouchedWhenNoLocalPhotosExist() {
+		List<RecordedRequest> recorded = new ArrayList<>();
+		List<StubResponse> responses = new ArrayList<>();
+		responses.add(new StubResponse(200, "{\"token\":\"abc123\"}", Map.of()));
+
+		PicPeakService service = new PicPeakService(enabledProperties, defaultSchulfotosProperties(),
+				codeGeneratorService, recordingHttpClient(responses, recorded));
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ", "pass1", "url", 42));
+
+		PicPeakService.UploadResult result = service.uploadEventPhotos(tempDir, codes);
+
+		assertThat(result.galleriesUpdated()).isEqualTo(0);
+		assertThat(result.errors()).isEmpty();
+		assertThat(recorded).extracting(RecordedRequest::method).containsExactly("POST");
+		assertThat(recorded).extracting(RecordedRequest::uri).allSatisfy(uri -> assertThat(uri).endsWith("/login"));
+	}
+
+	@Test
+	void uploadEventPhotosReportsErrorWhenExistingPhotosCannotBeListed() throws IOException {
+		Files.createDirectories(tempDir.resolve("portrait-1-watermarked"));
+		Files.writeString(tempDir.resolve("portrait-1-watermarked").resolve("p1.jpg"), "jpeg-bytes");
+
+		List<RecordedRequest> recorded = new ArrayList<>();
+		List<StubResponse> responses = new ArrayList<>();
+		responses.add(new StubResponse(200, "{\"token\":\"abc123\"}", Map.of()));
+		responses.add(new StubResponse(500, "bulk-failed", Map.of()));
+		responses.add(new StubResponse(500, "clear-failed", Map.of()));
+		responses.add(new StubResponse(500, "list-failed", Map.of()));
+
+		PicPeakService service = new PicPeakService(enabledProperties, defaultSchulfotosProperties(),
+				codeGeneratorService, recordingHttpClient(responses, recorded));
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ", "pass1", "url", 42));
+
+		PicPeakService.UploadResult result = service.uploadEventPhotos(tempDir, codes);
+
+		assertThat(result.galleriesUpdated()).isEqualTo(0);
+		assertThat(result.totalFilesUploaded()).isEqualTo(0);
+		assertThat(result.errors()).containsExactly("Failed to clear existing photos in event 42 (code #1)");
+		assertThat(uploadBodies(recorded)).isEmpty();
+	}
+
+	@Test
+	void uploadEventPhotosFallsBackToPerPhotoDeletionWhenBulkClearFails() throws IOException {
+		Files.createDirectories(tempDir.resolve("portrait-1-watermarked"));
+		Files.writeString(tempDir.resolve("portrait-1-watermarked").resolve("p1.jpg"), "jpeg-bytes");
+
 		List<StubResponse> responses = new ArrayList<>();
 		responses.add(new StubResponse(200, "{\"token\":\"abc123\"}", Map.of()));
 		responses.add(new StubResponse(500, "bulk-failed", Map.of()));
@@ -230,6 +286,7 @@ class PicPeakServiceTest {
 				Map.of()));
 		responses.add(new StubResponse(204, "", Map.of()));
 		responses.add(new StubResponse(204, "", Map.of()));
+		responses.add(new StubResponse(201, "{}", Map.of()));
 
 		PicPeakService service = new PicPeakService(enabledProperties, defaultSchulfotosProperties(),
 				codeGeneratorService, sequentialHttpClient(responses));
@@ -238,8 +295,8 @@ class PicPeakServiceTest {
 		PicPeakService.UploadResult result = service.uploadEventPhotos(tempDir, codes);
 
 		assertThat(result.errors()).isEmpty();
-		assertThat(result.galleriesUpdated()).isEqualTo(0);
-		assertThat(result.totalFilesUploaded()).isEqualTo(0);
+		assertThat(result.galleriesUpdated()).isEqualTo(1);
+		assertThat(result.totalFilesUploaded()).isEqualTo(1);
 	}
 
 	@Test
@@ -305,11 +362,61 @@ class PicPeakServiceTest {
 
 	// --- Stub HttpClient helpers ---
 
+	private static List<String> uploadBodies(List<RecordedRequest> recorded) {
+		return recorded.stream()
+			.filter(request -> request.uri().endsWith("/upload"))
+			.map(RecordedRequest::body)
+			.toList();
+	}
+
+	private static String bodyOf(HttpRequest request) {
+		return request.bodyPublisher().map(PicPeakServiceTest::drain).orElse("");
+	}
+
+	private static String drain(HttpRequest.BodyPublisher publisher) {
+		StringBuilder collected = new StringBuilder();
+		CountDownLatch completed = new CountDownLatch(1);
+		publisher.subscribe(new Flow.Subscriber<ByteBuffer>() {
+			@Override
+			public void onSubscribe(Flow.Subscription subscription) {
+				subscription.request(Long.MAX_VALUE);
+			}
+
+			@Override
+			public void onNext(ByteBuffer item) {
+				byte[] bytes = new byte[item.remaining()];
+				item.get(bytes);
+				collected.append(new String(bytes, StandardCharsets.ISO_8859_1));
+			}
+
+			@Override
+			public void onError(Throwable throwable) {
+				completed.countDown();
+			}
+
+			@Override
+			public void onComplete() {
+				completed.countDown();
+			}
+		});
+		try {
+			completed.await(5, TimeUnit.SECONDS);
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+		}
+		return collected.toString();
+	}
+
 	private static HttpClient stubHttpClient(int statusCode, String body) {
 		return sequentialHttpClient(List.of(new StubResponse(statusCode, body, Map.of())));
 	}
 
 	private static HttpClient sequentialHttpClient(List<StubResponse> responses) {
+		return recordingHttpClient(responses, new ArrayList<>());
+	}
+
+	private static HttpClient recordingHttpClient(List<StubResponse> responses, List<RecordedRequest> recorded) {
 		int[] index = { 0 };
 		return new HttpClient() {
 			@Override
@@ -318,6 +425,7 @@ class PicPeakServiceTest {
 					throws IOException, InterruptedException {
 				StubResponse stub;
 				synchronized (index) {
+					recorded.add(new RecordedRequest(request.method(), request.uri().toString(), bodyOf(request)));
 					stub = index[0] < responses.size() ? responses.get(index[0]++)
 							: responses.get(responses.size() - 1);
 				}
@@ -390,6 +498,9 @@ class PicPeakServiceTest {
 			this.body = body;
 			this.headers = headers != null ? headers : Map.of();
 		}
+	}
+
+	record RecordedRequest(String method, String uri, String body) {
 	}
 
 	static class StubHttpResponse implements HttpResponse<String> {
