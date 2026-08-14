@@ -177,7 +177,7 @@ class PicPeakServiceTest {
 
 	@Test
 	void uploadEventPhotosUploadsKlassenfotosAndPortraits() throws IOException {
-		Path klassen = tempDir.resolve("klassenfotos-watermarked");
+		Path klassen = tempDir.resolve("klassenfoto-watermarked");
 		Path portrait = tempDir.resolve("portrait-1-watermarked");
 		Files.createDirectories(klassen);
 		Files.createDirectories(portrait);
@@ -297,6 +297,52 @@ class PicPeakServiceTest {
 		assertThat(result.errors()).isEmpty();
 		assertThat(result.galleriesUpdated()).isEqualTo(1);
 		assertThat(result.totalFilesUploaded()).isEqualTo(1);
+	}
+
+	@Test
+	void uploadEventPhotosStillFindsClassPhotosInTheLegacyPluralisedFolder() throws IOException {
+		Path legacy = tempDir.resolve("klassenfotos-watermarked");
+		Files.createDirectories(legacy);
+		Files.writeString(legacy.resolve("legacy-class.jpg"), "jpeg-bytes");
+
+		List<RecordedRequest> recorded = new ArrayList<>();
+		List<StubResponse> responses = new ArrayList<>();
+		responses.add(new StubResponse(200, "{\"token\":\"abc123\"}", Map.of()));
+		responses.add(new StubResponse(200, "{}", Map.of()));
+		responses.add(new StubResponse(201, "{}", Map.of()));
+
+		PicPeakService service = new PicPeakService(enabledProperties, defaultSchulfotosProperties(),
+				codeGeneratorService, recordingHttpClient(responses, recorded));
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ", "pass1", "url", 42));
+
+		PicPeakService.UploadResult result = service.uploadEventPhotos(tempDir, codes);
+
+		assertThat(result.totalFilesUploaded()).isEqualTo(1);
+		assertThat(uploadBodies(recorded)).singleElement()
+			.satisfies(body -> assertThat(body).contains("legacy-class.jpg"));
+	}
+
+	@Test
+	void uploadEventPhotosPrefersTheCanonicalFolderOverTheLegacyOne() throws IOException {
+		Files.createDirectories(tempDir.resolve("klassenfotos-watermarked"));
+		Files.writeString(tempDir.resolve("klassenfotos-watermarked").resolve("legacy-class.jpg"), "jpeg-bytes");
+		Files.createDirectories(tempDir.resolve("klassenfoto-watermarked"));
+		Files.writeString(tempDir.resolve("klassenfoto-watermarked").resolve("current-class.jpg"), "jpeg-bytes");
+
+		List<RecordedRequest> recorded = new ArrayList<>();
+		List<StubResponse> responses = new ArrayList<>();
+		responses.add(new StubResponse(200, "{\"token\":\"abc123\"}", Map.of()));
+		responses.add(new StubResponse(200, "{}", Map.of()));
+		responses.add(new StubResponse(201, "{}", Map.of()));
+
+		PicPeakService service = new PicPeakService(enabledProperties, defaultSchulfotosProperties(),
+				codeGeneratorService, recordingHttpClient(responses, recorded));
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ", "pass1", "url", 42));
+
+		service.uploadEventPhotos(tempDir, codes);
+
+		assertThat(uploadBodies(recorded)).singleElement()
+			.satisfies(body -> assertThat(body).contains("current-class.jpg").doesNotContain("legacy-class.jpg"));
 	}
 
 	@Test

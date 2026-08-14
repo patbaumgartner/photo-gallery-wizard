@@ -77,7 +77,7 @@ public class ImageProcessingService {
 		int totalProcessed = 0;
 		List<Path> outputFolders = new ArrayList<>();
 		for (Path sourceDir : sourceFolders) {
-			Path outputDir = watermarkedOutputDir(eventDir, sourceDir);
+			Path outputDir = eventDir.resolve(sourceDir.getFileName() + watermarkedSuffix);
 			int count = resizeAndWatermarkFolder(sourceDir, outputDir, watermark, maxEdge, totalProcessed, totalImages,
 					progressListener);
 			totalProcessed += count;
@@ -90,14 +90,6 @@ public class ImageProcessingService {
 		LOGGER.info("Total: processed {} images under {}", totalProcessed, eventDir);
 		progressListener.accept(new ProcessingProgress(1.0d, "Wasserzeichen fertig"));
 		return new ImageProcessingResult(totalProcessed, outputFolders);
-	}
-
-	private Path watermarkedOutputDir(Path eventDir, Path sourceDir) {
-		String name = sourceDir.getFileName().toString();
-		if (name.equals(klassenfotoFolder)) {
-			return eventDir.resolve(klassenfotoFolder + "s" + watermarkedSuffix);
-		}
-		return eventDir.resolve(name + watermarkedSuffix);
 	}
 
 	private List<Path> collectSourceFolders(Path eventDir) throws IOException {

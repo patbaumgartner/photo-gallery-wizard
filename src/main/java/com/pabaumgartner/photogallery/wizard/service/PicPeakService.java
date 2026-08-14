@@ -142,7 +142,7 @@ public class PicPeakService {
 			return new UploadResult(0, 0, List.of("Login failed"));
 		}
 
-		Path klassenfotosWatermarked = eventDir.resolve(klassenfotoFolder + "s" + watermarkedSuffix);
+		Path klassenfotosWatermarked = klassenfotoWatermarkedDir(eventDir);
 		List<Path> klassenfotos = listImageFiles(klassenfotosWatermarked);
 
 		Integer klassenfotoCategoryId = picPeakProperties.klassenfotoCategoryId() != null
@@ -219,6 +219,20 @@ public class PicPeakService {
 
 		progressListener.accept(new UploadProgress(1.0d, "Upload fertig"));
 		return new UploadResult(galleriesUpdated, totalFilesUploaded, errors);
+	}
+
+	private Path klassenfotoWatermarkedDir(Path eventDir) {
+		Path canonical = eventDir.resolve(klassenfotoFolder + watermarkedSuffix);
+		if (Files.isDirectory(canonical)) {
+			return canonical;
+		}
+		Path legacy = eventDir.resolve(klassenfotoFolder + "s" + watermarkedSuffix);
+		if (Files.isDirectory(legacy)) {
+			LOGGER.warn("Using legacy class photo folder {}. Re-run the watermark step to produce {}.", legacy,
+					canonical.getFileName());
+			return legacy;
+		}
+		return canonical;
 	}
 
 	private boolean clearEventPhotos(String token, int eventId) {

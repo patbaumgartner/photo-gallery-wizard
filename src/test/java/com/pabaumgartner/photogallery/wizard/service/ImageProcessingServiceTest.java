@@ -73,7 +73,7 @@ class ImageProcessingServiceTest {
 
 		assertThat(result.totalProcessed()).isEqualTo(1);
 		assertThat(result.outputFolders()).hasSize(1);
-		Path watermarkedDir = eventDir.resolve("klassenfotos-watermarked");
+		Path watermarkedDir = eventDir.resolve("klassenfoto-watermarked");
 		assertThat(Files.isDirectory(watermarkedDir)).isTrue();
 		assertThat(Files.list(watermarkedDir).count()).isEqualTo(1);
 
@@ -105,7 +105,7 @@ class ImageProcessingServiceTest {
 
 		service.processEventFolders(eventDir, wm, 1200);
 
-		Path output = eventDir.resolve("klassenfotos-watermarked/small.jpg");
+		Path output = eventDir.resolve("klassenfoto-watermarked/small.jpg");
 		BufferedImage img = ImageIO.read(output.toFile());
 		assertThat(img.getWidth()).isEqualTo(800);
 		assertThat(img.getHeight()).isEqualTo(600);
@@ -175,7 +175,7 @@ class ImageProcessingServiceTest {
 		assertThatThrownBy(() -> service.processEventFolders(eventDir, createWatermark(200, 100), 1200))
 			.isInstanceOf(IOException.class)
 			.hasMessageContaining("Could not read image");
-		assertThat(eventDir.resolve("klassenfotos-watermarked").resolve("good.jpg")).exists();
+		assertThat(eventDir.resolve("klassenfoto-watermarked").resolve("good.jpg")).exists();
 		try (Stream<Path> entries = Files.list(eventDir)) {
 			assertThat(entries.map(path -> path.getFileName().toString()))
 				.noneSatisfy(name -> assertThat(name).startsWith(".staging-"));
@@ -235,7 +235,7 @@ class ImageProcessingServiceTest {
 		Path wm = createWatermark(200, 100);
 		service.processEventFolders(eventDir, wm, 1200);
 
-		Path outputDir = eventDir.resolve("klassenfotos-watermarked");
+		Path outputDir = eventDir.resolve("klassenfoto-watermarked");
 		assertThat(Files.list(outputDir).findFirst().get().getFileName().toString()).endsWith(".jpg");
 	}
 
@@ -279,7 +279,7 @@ class ImageProcessingServiceTest {
 		ImageProcessingService.ImageProcessingResult result = service.processEventFolders(eventDir, wm, 1200);
 
 		assertThat(result.totalProcessed()).isEqualTo(1);
-		assertThat(eventDir.resolve("klassenfotos-watermarked").resolve("class1.jpg")).exists();
+		assertThat(eventDir.resolve("klassenfoto-watermarked").resolve("class1.jpg")).exists();
 	}
 
 	@Test
@@ -315,7 +315,7 @@ class ImageProcessingServiceTest {
 
 		service.processEventFolders(eventDir, wm, 1200);
 
-		Path watermarkedDir = eventDir.resolve("klassenfotos-watermarked");
+		Path watermarkedDir = eventDir.resolve("klassenfoto-watermarked");
 		assertThat(watermarkedDir.resolve("MEL_6175.jpg")).exists();
 		assertThat(watermarkedDir.resolve("MEL_6175_NEU.jpg")).doesNotExist();
 	}
