@@ -1,5 +1,7 @@
 package com.pabaumgartner.photogallery.wizard.service;
 
+import java.awt.Color;
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -7,6 +9,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+
+import javax.imageio.ImageIO;
 
 import com.pabaumgartner.photogallery.wizard.config.ImageProperties;
 import com.pabaumgartner.photogallery.wizard.model.GalleryCode;
@@ -16,6 +20,7 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDResources;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -304,6 +309,101 @@ class PdfGeneratorServiceTest {
 		assertThatThrownBy(() -> pdfService.createPdf(codes, new LinkedHashMap<>(), options))
 			.isInstanceOf(IOException.class)
 			.hasMessageContaining("ABCD-1234-WXYZ");
+	}
+
+	@Test
+	void aLocalLogoIsDrawnOnTheCardBack() throws IOException {
+		Path logo = writePng(tempDir.resolve("logo.png"));
+		Path withLogo = tempDir.resolve("with-logo.pdf");
+		Path withoutLogo = tempDir.resolve("without-logo.pdf");
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ", "pw"));
+
+		pdfService.createPdf(codes, generateQrImages(codes),
+				new PdfOptions(withLogo, 3, 4, false, "Event", "https://base.com", logo.toString(), "C", "P"));
+		pdfService.createPdf(codes, generateQrImages(codes),
+				new PdfOptions(withoutLogo, 3, 4, false, "Event", "https://base.com", "", "C", "P"));
+
+		try (PDDocument doc = Loader.loadPDF(withLogo.toFile())) {
+			assertThat(imageCount(doc.getPage(1))).isEqualTo(1);
+		}
+		try (PDDocument doc = Loader.loadPDF(withoutLogo.toFile())) {
+			assertThat(imageCount(doc.getPage(1))).isZero();
+		}
+	}
+
+	@Test
+	void aLogoThatCannotBeFoundOrDecodedStillProducesAPdf() throws IOException {
+		Path broken = tempDir.resolve("broken.png");
+		Files.writeString(broken, "this is not an image");
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ", "pw"));
+
+		for (String logoUrl : List.of(tempDir.resolve("does-not-exist.png").toString(), broken.toString())) {
+			Path output = tempDir.resolve("logo-" + logoUrl.hashCode() + ".pdf");
+
+			pdfService.createPdf(codes, generateQrImages(codes),
+					new PdfOptions(output, 3, 4, false, "Event", "https://base.com", logoUrl, "C", "P"));
+
+			try (PDDocument doc = Loader.loadPDF(output.toFile())) {
+				assertThat(doc.getNumberOfPages()).isEqualTo(2);
+				assertThat(imageCount(doc.getPage(1))).isZero();
+			}
+		}
+	}
+
+	@Test
+	void aBaseUrlTooLongForTheCardIsShortened() throws IOException {
+		Path output = tempDir.resolve("long-url.pdf");
+		String baseUrl = "https://gallery.example.com/" + "a-very-long-path-segment/".repeat(8);
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ", "pw"));
+
+		pdfService.createPdf(codes, generateQrImages(codes),
+				new PdfOptions(output, 3, 4, false, "Event", baseUrl, "", "C", "P"));
+
+		try (PDDocument doc = Loader.loadPDF(output.toFile())) {
+			PDFTextStripper stripper = new PDFTextStripper();
+			stripper.setStartPage(2);
+			stripper.setEndPage(2);
+			String back = stripper.getText(doc);
+			assertThat(back).contains("...").doesNotContain(baseUrl);
+		}
+	}
+
+	@Test
+	void aPasswordTooLongForTheCardIsStillPrintedInFull() throws IOException {
+		Path output = tempDir.resolve("long-password.pdf");
+		String password = "Abcdefghijklmnopqrstuvwxyz0123456789";
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ", password));
+
+		pdfService.createPdf(codes, generateQrImages(codes),
+				new PdfOptions(output, 3, 4, false, "Event", "https://base.com", "", "C", "P"));
+
+		try (PDDocument doc = Loader.loadPDF(output.toFile())) {
+			PDFTextStripper stripper = new PDFTextStripper();
+			stripper.setStartPage(2);
+			stripper.setEndPage(2);
+			assertThat(stripper.getText(doc)).contains(password);
+		}
+	}
+
+	private Path writePng(Path file) throws IOException {
+		BufferedImage image = new BufferedImage(120, 60, BufferedImage.TYPE_INT_RGB);
+		Graphics2D graphics = image.createGraphics();
+		graphics.setColor(Color.RED);
+		graphics.fillRect(0, 0, 120, 60);
+		graphics.dispose();
+		ImageIO.write(image, "PNG", file.toFile());
+		return file;
+	}
+
+	private long imageCount(PDPage page) {
+		PDResources resources = page.getResources();
+		long count = 0;
+		for (COSName name : resources.getXObjectNames()) {
+			if (resources.isImageXObject(name)) {
+				count++;
+			}
+		}
+		return count;
 	}
 
 }
