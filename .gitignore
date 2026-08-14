@@ -37,6 +37,7 @@ build/
 gallery-output/
 schulfotos/
 logs/
+deep-test.log
 
 ### Credentials ###
 configuration/picpeak-credentials.properties

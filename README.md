@@ -319,6 +319,11 @@ app.picpeak.customer-email=you@example.com
 
 The build also runs JaCoCo code coverage and Taikai architecture verification.
 
+### Maintenance Scripts
+
+- `run-deep-tests.sh` runs the test suite repeatedly in randomised order and across several time zones and locales, to surface order- and environment-dependent failures.
+- `picpeak-delete-all-events.sh` permanently deletes **every** event on the configured PicPeak instance. It reads `configuration/picpeak-credentials.properties`, so point it at a throwaway instance. Preview with `--dry-run`; without it the script asks you to type the event count to confirm, and `--yes` skips that prompt for unattended use.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

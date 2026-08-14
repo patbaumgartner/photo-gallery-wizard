@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Deletes ALL events from a PicPeak instance.
+# Deletes ALL events from a PicPeak instance. This cannot be undone.
 # Reads credentials from configuration/picpeak-credentials.properties
 # (same file used by the Java app).
 #
 # Usage:
-#   ./picpeak-delete-all-events.sh              # force-delete all events (non-interactive)
 #   ./picpeak-delete-all-events.sh --dry-run    # list events without deleting
+#   ./picpeak-delete-all-events.sh              # ask for confirmation, then delete
+#   ./picpeak-delete-all-events.sh --yes        # delete without asking (for scripts)
 
 set -euo pipefail
 
@@ -13,14 +14,18 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROPS_FILE="${SCRIPT_DIR}/configuration/picpeak-credentials.properties"
 
 DRY_RUN=false
+ASSUME_YES=false
 for arg in "$@"; do
   case "$arg" in
     --dry-run)
       DRY_RUN=true
       ;;
+    --yes|-y)
+      ASSUME_YES=true
+      ;;
     *)
       echo "ERROR: Unknown argument: $arg" >&2
-      echo "Usage: $0 [--dry-run]" >&2
+      echo "Usage: $0 [--dry-run] [--yes]" >&2
       exit 1
       ;;
   esac
@@ -128,8 +133,20 @@ if [[ "$DRY_RUN" == true ]]; then
   exit 0
 fi
 
-# Force mode: no interactive confirmation
-echo "FORCE DELETE enabled: deleting ALL $EVENT_COUNT event(s) without prompt."
+if [[ "$ASSUME_YES" != true ]]; then
+  if [[ ! -t 0 ]]; then
+    echo "ERROR: Refusing to delete $EVENT_COUNT event(s) without a terminal to confirm on." >&2
+    echo "Re-run with --yes if you really mean it, or --dry-run to preview." >&2
+    exit 1
+  fi
+  echo "This permanently deletes ALL $EVENT_COUNT event(s) on $API_URL."
+  read -r -p "Type the number of events to confirm: " CONFIRMATION
+  if [[ "$CONFIRMATION" != "$EVENT_COUNT" ]]; then
+    echo "Aborted." >&2
+    exit 1
+  fi
+fi
+echo "Deleting $EVENT_COUNT event(s)..."
 echo ""
 
 # Delete each event
