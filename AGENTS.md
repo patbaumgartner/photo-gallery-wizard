@@ -1,4 +1,4 @@
-# Copilot Instructions — Photo Gallery Wizard
+# Photo Gallery Wizard — Agent Instructions
 
 ## Project Overview
 
