@@ -8,6 +8,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.pabaumgartner.photogallery.wizard.config.AppProperties;
@@ -15,6 +17,8 @@ import com.pabaumgartner.photogallery.wizard.config.ImageProperties;
 import com.pabaumgartner.photogallery.wizard.config.PicPeakProperties;
 import com.pabaumgartner.photogallery.wizard.config.SchulfotosProperties;
 import com.pabaumgartner.photogallery.wizard.model.CsvReadResult;
+import com.pabaumgartner.photogallery.wizard.model.GalleryCode;
+import com.pabaumgartner.photogallery.wizard.model.WizardExecutionResult;
 import com.pabaumgartner.photogallery.wizard.model.WizardRequest;
 import com.pabaumgartner.photogallery.wizard.service.CsvReaderService;
 import com.pabaumgartner.photogallery.wizard.service.FolderStructureService;
@@ -50,6 +54,8 @@ public class PhotoGalleryWizardTui {
 
 	private final PhotoGalleryWizardController controller = new PhotoGalleryWizardController(state);
 
+	private final UiEventQueue uiEvents = new UiEventQueue();
+
 	private final FormState form;
 
 	private final AppProperties appProperties;
@@ -71,6 +77,8 @@ public class PhotoGalleryWizardTui {
 	private final PicPeakService picPeakService;
 
 	private ToolkitRunner runner;
+
+	private ExecutorService worker;
 
 	public PhotoGalleryWizardTui(AppProperties appProperties, ImageProperties imageProperties,
 			SchulfotosProperties schulfotosProperties, PicPeakProperties picPeakProperties,
@@ -97,16 +105,24 @@ public class PhotoGalleryWizardTui {
 
 	public void run() throws Exception {
 		var config = TuiConfig.builder().build();
+		this.worker = Executors.newSingleThreadExecutor(runnable -> {
+			Thread thread = new Thread(runnable, "wizard-worker");
+			thread.setDaemon(true);
+			return thread;
+		});
 		try (var toolkitRunner = ToolkitRunner.create(config)) {
 			this.runner = toolkitRunner;
 			toolkitRunner.run(this::renderWizard);
 		}
 		finally {
 			this.runner = null;
+			this.worker.shutdownNow();
+			this.worker = null;
 		}
 	}
 
 	private Element renderWizard() {
+		uiEvents.drain();
 		PhotoGalleryWizardUi.updateTerminalHeight(currentTerminalHeight());
 		PhotoGalleryWizardViewModel viewModel = buildViewModel();
 		Element currentStepContent = PhotoGalleryWizardStepRenderer.renderCurrentStep(viewModel, classNameField(),
@@ -258,28 +274,31 @@ public class PhotoGalleryWizardTui {
 		state.executionStage("Startet");
 		state.advanceToResults();
 
-		Thread workflowThread = new Thread(() -> runWorkflow(request), "wizard-workflow");
-		workflowThread.setDaemon(true);
-		workflowThread.start();
+		worker.execute(() -> runWorkflow(request));
 	}
 
 	private void runWorkflow(WizardRequest request) {
 		try {
-			state.executionResult(workflowService.execute(request, progress -> {
+			WizardExecutionResult result = workflowService.execute(request, progress -> uiEvents.post(() -> {
 				state.executionProgress(progress.percent());
 				state.executionStage(progress.stage());
 			}));
-			state.executionStage("Fertig");
-			state.executionProgress(1.0d);
-			state.overwriteConfirmed(false);
+			uiEvents.post(() -> {
+				state.executionResult(result);
+				state.executionStage("Fertig");
+				state.executionProgress(1.0d);
+				state.overwriteConfirmed(false);
+				state.executionInProgress(false);
+			});
 		}
 		catch (Exception ex) {
-			state.executionResult(null);
-			state.executionMessage(PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
-			state.overwriteConfirmed(false);
-		}
-		finally {
-			state.executionInProgress(false);
+			String message = PhotoGalleryWizardUi.sanitizeError(ex.getMessage());
+			uiEvents.post(() -> {
+				state.executionResult(null);
+				state.executionMessage(message);
+				state.overwriteConfirmed(false);
+				state.executionInProgress(false);
+			});
 		}
 	}
 
@@ -365,28 +384,31 @@ public class PhotoGalleryWizardTui {
 		state.watermarkProgress(0.0d);
 		state.watermarkStage("Startet");
 
-		Thread watermarkThread = new Thread(() -> runWatermark(eventDir), "wizard-watermark");
-		watermarkThread.setDaemon(true);
-		watermarkThread.start();
+		worker.execute(() -> runWatermark(eventDir));
 	}
 
 	private void runWatermark(Path eventDir) {
 		try {
-			state.watermarkResult(imageProcessingService.processEventFolders(eventDir,
-					Path.of(imageProperties.watermarkPath()), imageProperties.resizeMaxEdge(), progress -> {
+			ImageProcessingService.ImageProcessingResult result = imageProcessingService.processEventFolders(eventDir,
+					Path.of(imageProperties.watermarkPath()), imageProperties.resizeMaxEdge(),
+					progress -> uiEvents.post(() -> {
 						state.watermarkProgress(progress.percent());
 						state.watermarkStage(progress.stage());
 					}));
-			state.watermarkProgress(1.0d);
-			state.watermarkStage("Wasserzeichen fertig");
-			state.advanceToUpload();
+			uiEvents.post(() -> {
+				state.watermarkResult(result);
+				state.watermarkProgress(1.0d);
+				state.watermarkStage("Wasserzeichen fertig");
+				state.watermarkInProgress(false);
+				state.advanceToUpload();
+			});
 		}
 		catch (Exception ex) {
-			state.validationMessage(
-					"Wasserzeichen/Skalierung fehlgeschlagen: " + PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
-		}
-		finally {
-			state.watermarkInProgress(false);
+			String message = PhotoGalleryWizardUi.sanitizeError(ex.getMessage());
+			uiEvents.post(() -> {
+				state.validationMessage("Wasserzeichen/Skalierung fehlgeschlagen: " + message);
+				state.watermarkInProgress(false);
+			});
 		}
 	}
 
@@ -415,28 +437,33 @@ public class PhotoGalleryWizardTui {
 		state.uploadProgress(0.0d);
 		state.uploadStage("Startet");
 
-		Thread uploadThread = new Thread(() -> runUpload(eventDir), "wizard-upload");
-		uploadThread.setDaemon(true);
-		uploadThread.start();
+		List<GalleryCode> codes = List.copyOf(state.folderCodes());
+		worker.execute(() -> runUpload(eventDir, codes));
 	}
 
-	private void runUpload(Path eventDir) {
+	private void runUpload(Path eventDir, List<GalleryCode> codes) {
 		try {
-			state.uploadResult(picPeakService.uploadEventPhotos(eventDir, state.folderCodes(), progress -> {
-				state.uploadProgress(progress.percent());
-				state.uploadStage(progress.stage());
-			}));
-			state.uploadProgress(1.0d);
-			state.uploadStage("Upload fertig");
-			state.advanceToDone();
+			PicPeakService.UploadResult result = picPeakService.uploadEventPhotos(eventDir, codes,
+					progress -> uiEvents.post(() -> {
+						state.uploadProgress(progress.percent());
+						state.uploadStage(progress.stage());
+					}));
+			uiEvents.post(() -> {
+				state.uploadResult(result);
+				state.uploadProgress(1.0d);
+				state.uploadStage("Upload fertig");
+				state.uploadInProgress(false);
+				state.advanceToDone();
+			});
 		}
 		catch (Exception ex) {
-			state.uploadResult(null);
-			state.uploadMessage(PhotoGalleryWizardUi.sanitizeError(ex.getMessage()));
-			state.advanceToDone();
-		}
-		finally {
-			state.uploadInProgress(false);
+			String message = PhotoGalleryWizardUi.sanitizeError(ex.getMessage());
+			uiEvents.post(() -> {
+				state.uploadResult(null);
+				state.uploadMessage(message);
+				state.uploadInProgress(false);
+				state.advanceToDone();
+			});
 		}
 	}
 
