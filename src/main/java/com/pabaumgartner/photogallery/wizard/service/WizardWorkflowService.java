@@ -76,9 +76,9 @@ public class WizardWorkflowService {
 		PdfOptions pdfOptions = new PdfOptions(request.pdfPath(), request.gridColumns(), request.gridRows(),
 				request.showCuttingLines(), request.eventName(), request.baseUrl(), request.logoUrl(),
 				request.galleryCodeLabel(), request.galleryPasswordLabel());
-		int pageCount = pdfGeneratorService.createPdf(codes, qrImages, pdfOptions);
+		int sheetCount = pdfGeneratorService.createPdf(codes, qrImages, pdfOptions);
 		progressListener.accept(new WorkflowProgress(1.00d, "Fertig"));
-		return new WizardExecutionResult(request.eventCode(), request.eventName(), codes.size(), pageCount,
+		return new WizardExecutionResult(request.eventCode(), request.eventName(), codes.size(), sheetCount,
 				request.csvPath(), request.pdfPath());
 	}
 

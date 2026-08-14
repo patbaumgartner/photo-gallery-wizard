@@ -65,7 +65,7 @@ class WizardWorkflowServiceTest {
 		assertThat(result.eventCode()).isEqualTo("ABCD");
 		assertThat(result.eventName()).isEqualTo("Klasse 1a");
 		assertThat(result.codeCount()).isEqualTo(3);
-		assertThat(result.pageCount()).isEqualTo(1);
+		assertThat(result.sheetCount()).isEqualTo(1);
 		assertThat(result.csvPath()).isEqualTo(csvPath);
 		assertThat(result.pdfPath()).isEqualTo(pdfPath);
 	}
@@ -95,7 +95,7 @@ class WizardWorkflowServiceTest {
 		WizardExecutionResult result = wizardService.execute(request);
 
 		assertThat(result.codeCount()).isEqualTo(17);
-		assertThat(result.pageCount()).isEqualTo(2);
+		assertThat(result.sheetCount()).isEqualTo(2);
 	}
 
 	@Test
@@ -128,7 +128,7 @@ class WizardWorkflowServiceTest {
 		WizardExecutionResult result = wizardService.execute(request);
 
 		assertThat(result.codeCount()).isEqualTo(1);
-		assertThat(result.pageCount()).isEqualTo(1);
+		assertThat(result.sheetCount()).isEqualTo(1);
 	}
 
 	@Test

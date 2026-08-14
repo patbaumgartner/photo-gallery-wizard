@@ -85,17 +85,15 @@ public class PdfGeneratorService {
 
 	private static final float FIT_FONT_MARGIN = 4f;
 
-	private final int logoConnectTimeoutMs;
-
-	private final int logoReadTimeoutMs;
-
 	private static final String RESOURCES_PREFIX = "src/main/resources/";
 
 	private static final float INK = 0.0f;
 
-	private static final float GRAY = 0.0f;
-
 	private static final float LINE_GRAY = 0.75f;
+
+	private final int logoConnectTimeoutMs;
+
+	private final int logoReadTimeoutMs;
 
 	public PdfGeneratorService(ImageProperties imageProperties) {
 		this.logoConnectTimeoutMs = imageProperties.logoConnectTimeoutMs();
@@ -107,13 +105,7 @@ public class PdfGeneratorService {
 
 		int gridColumns = options.gridColumns();
 		int gridRows = options.gridRows();
-		boolean showCuttingLines = options.showCuttingLines();
-		String eventName = options.eventName();
 		Path outputPath = options.outputPath();
-		String baseUrl = options.baseUrl();
-		String logoUrl = options.logoUrl();
-		String galleryCodeLabel = options.galleryCodeLabel();
-		String galleryPasswordLabel = options.galleryPasswordLabel();
 
 		Path parent = outputPath.toAbsolutePath().getParent();
 		if (parent != null) {
@@ -123,145 +115,53 @@ public class PdfGeneratorService {
 		int codesPerPage = gridColumns * gridRows;
 		float pageWidth = PDRectangle.A4.getWidth();
 		float pageHeight = PDRectangle.A4.getHeight();
-		float usableWidth = pageWidth - 2 * MARGIN;
-		float usableHeight = pageHeight - 2 * MARGIN;
-		float cellWidth = usableWidth / gridColumns;
-		float cellHeight = usableHeight / gridRows;
+		float cellWidth = (pageWidth - 2 * MARGIN) / gridColumns;
+		float cellHeight = (pageHeight - 2 * MARGIN) / gridRows;
 		float innerWidth = cellWidth - 2 * CELL_PADDING;
 		float innerHeight = cellHeight - 2 * CELL_PADDING;
 		float qrSize = Math.min(innerWidth - 2 * QR_BORDER_PAD, innerHeight - TEXT_HEIGHT - QR_BORDER_PAD);
-		boolean hasEventName = eventName != null && !eventName.isBlank();
-		boolean hasBackPage = true;
-		int numFrontPages = (int) Math.ceil((double) codes.size() / codesPerPage);
+		int sheetCount = (int) Math.ceil((double) codes.size() / codesPerPage);
 
 		try (PDDocument document = new PDDocument()) {
 			PDType1Font fontBold = new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD);
 			PDType1Font fontRegular = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-			PDImageXObject logoImage = null;
-			if (!logoUrl.isBlank()) {
-				logoImage = loadLogoImage(document, logoUrl);
-			}
+			PDImageXObject logoImage = options.logoUrl().isBlank() ? null : loadLogoImage(document, options.logoUrl());
 
-			for (int pageIdx = 0; pageIdx < numFrontPages; pageIdx++) {
-				int startI = pageIdx * codesPerPage;
+			for (int sheet = 0; sheet < sheetCount; sheet++) {
+				int startI = sheet * codesPerPage;
 				int endI = Math.min(startI + codesPerPage, codes.size());
 
 				PDPage frontPage = new PDPage(PDRectangle.A4);
 				document.addPage(frontPage);
-
-				for (int i = startI; i < endI; i++) {
-					int indexOnPage = i - startI;
-					int col = indexOnPage % gridColumns;
-					int row = indexOnPage / gridColumns;
-
-					GalleryCode code = codes.get(i);
-					BufferedImage qrImage = qrImages.get(code);
-
-					float cellX = MARGIN + col * cellWidth;
-					float cellY = pageHeight - MARGIN - (row + 1) * cellHeight;
-					float innerX = cellX + CELL_PADDING;
-					float innerY = cellY + CELL_PADDING;
-					float qrX = innerX + (innerWidth - qrSize) / 2;
-					float qrY = innerY + TEXT_HEIGHT - QR_VERTICAL_OFFSET_MM * MM_TO_PT;
-
-					byte[] imageBytes = toByteArray(qrImage);
-					PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageBytes,
-							"qr-" + code.code());
-
-					try (PDPageContentStream content = new PDPageContentStream(document, frontPage,
-							PDPageContentStream.AppendMode.APPEND, true, true)) {
-						content.setStrokingColor(LINE_GRAY, LINE_GRAY, LINE_GRAY);
-						content.setLineWidth(BACK_CARD_BORDER_WIDTH);
-						content.addRect(innerX, innerY, innerWidth, innerHeight);
-						content.stroke();
-
-						content.drawImage(pdImage, qrX, qrY, qrSize, qrSize);
-
-						String codeLabel = code.code();
-						float actualCodeFontSize = fitFontSize(fontBold, codeLabel, innerWidth - FIT_FONT_MARGIN,
-								CODE_FONT_SIZE, MIN_FONT_SIZE);
-						float codeLabelWidth = fontBold.getStringWidth(codeLabel) / 1000f * actualCodeFontSize;
-						float codeLabelX = innerX + (innerWidth - codeLabelWidth) / 2;
-
-						float galleryCodeLabelWidth = fontRegular.getStringWidth(galleryCodeLabel) / 1000f
-								* BACK_LABEL_FONT_SIZE;
-						float galleryCodeLabelX = innerX + (innerWidth - galleryCodeLabelWidth) / 2;
-
-						if (hasEventName) {
-							float combinedHeight = actualCodeFontSize + BACK_LABEL_PW_GAP + BACK_LABEL_FONT_SIZE
-									+ EVENT_NAME_GAP + EVENT_NAME_FONT_SIZE;
-							float blockStartY = innerY + (TEXT_HEIGHT - combinedHeight) / 2;
-
-							content.beginText();
-							content.setFont(fontBold, actualCodeFontSize);
-							content.newLineAtOffset(codeLabelX, blockStartY);
-							content.showText(codeLabel);
-							content.endText();
-
-							float galleryCodeLabelY = blockStartY + actualCodeFontSize + BACK_LABEL_PW_GAP;
-							content.beginText();
-							content.setFont(fontRegular, BACK_LABEL_FONT_SIZE);
-							content.newLineAtOffset(galleryCodeLabelX, galleryCodeLabelY);
-							content.showText(galleryCodeLabel);
-							content.endText();
-
-							float eventNameWidth = fontRegular.getStringWidth(eventName) / 1000 * EVENT_NAME_FONT_SIZE;
-							float eventNameX = innerX + (innerWidth - eventNameWidth) / 2;
-							float eventNameY = galleryCodeLabelY + BACK_LABEL_FONT_SIZE + EVENT_NAME_GAP + MM_TO_PT;
-
-							content.beginText();
-							content.setFont(fontRegular, EVENT_NAME_FONT_SIZE);
-							content.newLineAtOffset(eventNameX, eventNameY);
-							content.showText(eventName);
-							content.endText();
-						}
-						else {
-							float combinedHeight = actualCodeFontSize + BACK_LABEL_PW_GAP + BACK_LABEL_FONT_SIZE;
-							float blockStartY = innerY + (TEXT_HEIGHT - combinedHeight) / 2;
-
-							content.beginText();
-							content.setFont(fontBold, actualCodeFontSize);
-							content.newLineAtOffset(codeLabelX, blockStartY);
-							content.showText(codeLabel);
-							content.endText();
-
-							float galleryCodeLabelY = blockStartY + actualCodeFontSize + BACK_LABEL_PW_GAP;
-							content.beginText();
-							content.setFont(fontRegular, BACK_LABEL_FONT_SIZE);
-							content.newLineAtOffset(galleryCodeLabelX, galleryCodeLabelY);
-							content.showText(galleryCodeLabel);
-							content.endText();
-						}
-					}
-				}
-
-				if (hasBackPage) {
-					PDPage backPage = new PDPage(PDRectangle.A4);
-					document.addPage(backPage);
-
+				try (PDPageContentStream content = new PDPageContentStream(document, frontPage)) {
 					for (int i = startI; i < endI; i++) {
 						int indexOnPage = i - startI;
-						int col = indexOnPage % gridColumns;
-						int row = indexOnPage / gridColumns;
-						int mirroredCol = gridColumns - 1 - col;
-
 						GalleryCode code = codes.get(i);
-
-						float cellX = MARGIN + mirroredCol * cellWidth;
-						float cellY = pageHeight - MARGIN - (row + 1) * cellHeight;
-						float innerX = cellX + CELL_PADDING;
-						float innerY = cellY + CELL_PADDING;
-
-						drawBackCell(document, backPage, code, innerX, innerY, innerWidth, innerHeight, fontBold,
-								fontRegular, logoImage, baseUrl, galleryPasswordLabel);
+						float innerX = MARGIN + (indexOnPage % gridColumns) * cellWidth + CELL_PADDING;
+						float innerY = pageHeight - MARGIN - (indexOnPage / gridColumns + 1) * cellHeight
+								+ CELL_PADDING;
+						PDImageXObject qrImage = PDImageXObject.createFromByteArray(document,
+								toByteArray(qrImages.get(code)), "qr-" + code.code());
+						drawFrontCell(content, code, qrImage, innerX, innerY, innerWidth, innerHeight, qrSize, fontBold,
+								fontRegular, options);
 					}
+					drawCuttingLines(content, options, pageWidth, pageHeight, gridColumns, gridRows, cellWidth,
+							cellHeight);
 				}
-			}
 
-			if (showCuttingLines) {
-				for (int p = 0; p < document.getNumberOfPages(); p++) {
-					PDPage page = document.getPage(p);
-					drawCuttingLines(document, page, pageWidth, pageHeight, gridColumns, gridRows, cellWidth,
+				PDPage backPage = new PDPage(PDRectangle.A4);
+				document.addPage(backPage);
+				try (PDPageContentStream content = new PDPageContentStream(document, backPage)) {
+					for (int i = startI; i < endI; i++) {
+						int indexOnPage = i - startI;
+						int mirroredCol = gridColumns - 1 - indexOnPage % gridColumns;
+						float innerX = MARGIN + mirroredCol * cellWidth + CELL_PADDING;
+						float innerY = pageHeight - MARGIN - (indexOnPage / gridColumns + 1) * cellHeight
+								+ CELL_PADDING;
+						drawBackCell(content, codes.get(i), innerX, innerY, innerWidth, innerHeight, fontBold,
+								fontRegular, logoImage, options);
+					}
+					drawCuttingLines(content, options, pageWidth, pageHeight, gridColumns, gridRows, cellWidth,
 							cellHeight);
 				}
 			}
@@ -271,18 +171,70 @@ public class PdfGeneratorService {
 
 		LOGGER.atInfo()
 			.addArgument(outputPath)
-			.addArgument(numFrontPages)
+			.addArgument(sheetCount)
 			.addArgument(() -> codes.size())
-			.log("Generated PDF: {} ({} pages, {} codes)");
-		return numFrontPages;
+			.log("Generated PDF: {} ({} duplex sheets, {} codes)");
+		return sheetCount;
 	}
 
-	private void drawBackCell(PDDocument document, PDPage page, GalleryCode code, float innerX, float innerY,
-			float innerWidth, float innerHeight, PDType1Font fontBold, PDType1Font fontRegular,
-			PDImageXObject logoImage, String baseUrl, String galleryPasswordLabel) throws IOException {
+	private void drawFrontCell(PDPageContentStream content, GalleryCode code, PDImageXObject qrImage, float innerX,
+			float innerY, float innerWidth, float innerHeight, float qrSize, PDType1Font fontBold,
+			PDType1Font fontRegular, PdfOptions options) throws IOException {
+		content.saveGraphicsState();
+		try {
+			content.setStrokingColor(LINE_GRAY, LINE_GRAY, LINE_GRAY);
+			content.setLineWidth(BACK_CARD_BORDER_WIDTH);
+			content.addRect(innerX, innerY, innerWidth, innerHeight);
+			content.stroke();
 
-		try (PDPageContentStream cs = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND,
-				true, true)) {
+			content.drawImage(qrImage, innerX + (innerWidth - qrSize) / 2,
+					innerY + TEXT_HEIGHT - QR_VERTICAL_OFFSET_MM * MM_TO_PT, qrSize, qrSize);
+
+			String codeLabel = code.code();
+			String galleryCodeLabel = options.galleryCodeLabel();
+			String eventName = options.eventName();
+			boolean hasEventName = !eventName.isBlank();
+
+			float actualCodeFontSize = fitFontSize(fontBold, codeLabel, innerWidth - FIT_FONT_MARGIN, CODE_FONT_SIZE,
+					MIN_FONT_SIZE);
+			float combinedHeight = actualCodeFontSize + BACK_LABEL_PW_GAP + BACK_LABEL_FONT_SIZE
+					+ (hasEventName ? EVENT_NAME_GAP + EVENT_NAME_FONT_SIZE : 0f);
+			float blockStartY = innerY + (TEXT_HEIGHT - combinedHeight) / 2;
+
+			content.setNonStrokingColor(INK, INK, INK);
+			drawCenteredText(content, fontBold, actualCodeFontSize, codeLabel, innerX, innerWidth, blockStartY);
+
+			float galleryCodeLabelY = blockStartY + actualCodeFontSize + BACK_LABEL_PW_GAP;
+			drawCenteredText(content, fontRegular, BACK_LABEL_FONT_SIZE, galleryCodeLabel, innerX, innerWidth,
+					galleryCodeLabelY);
+
+			if (hasEventName) {
+				drawCenteredText(content, fontRegular, EVENT_NAME_FONT_SIZE, eventName, innerX, innerWidth,
+						galleryCodeLabelY + BACK_LABEL_FONT_SIZE + EVENT_NAME_GAP + MM_TO_PT);
+			}
+		}
+		finally {
+			content.restoreGraphicsState();
+		}
+	}
+
+	private void drawCenteredText(PDPageContentStream content, PDType1Font font, float fontSize, String text,
+			float innerX, float innerWidth, float y) throws IOException {
+		float textWidth = font.getStringWidth(text) / 1000f * fontSize;
+		content.beginText();
+		content.setFont(font, fontSize);
+		content.newLineAtOffset(innerX + (innerWidth - textWidth) / 2, y);
+		content.showText(text);
+		content.endText();
+	}
+
+	private void drawBackCell(PDPageContentStream cs, GalleryCode code, float innerX, float innerY, float innerWidth,
+			float innerHeight, PDType1Font fontBold, PDType1Font fontRegular, PDImageXObject logoImage,
+			PdfOptions options) throws IOException {
+
+		String baseUrl = options.baseUrl();
+		cs.saveGraphicsState();
+		try {
 
 			cs.setStrokingColor(LINE_GRAY, LINE_GRAY, LINE_GRAY);
 			cs.setLineWidth(BACK_CARD_BORDER_WIDTH);
@@ -325,12 +277,12 @@ public class PdfGeneratorService {
 			float blockH = BACK_LABEL_FONT_SIZE + BACK_LABEL_PW_GAP + actualPwFontSize;
 			float blockBotY = passwordSectionBotY + ((rule1Y - BACK_RULE_GAP - passwordSectionBotY) - blockH) / 2f;
 
-			String label = galleryPasswordLabel;
+			String label = options.galleryPasswordLabel();
 			float labelW = fontRegular.getStringWidth(label) / 1000f * BACK_LABEL_FONT_SIZE;
 			float labelX = innerX + (innerWidth - labelW) / 2f;
 			float labelY = blockBotY + actualPwFontSize + BACK_LABEL_PW_GAP;
 			cs.beginText();
-			cs.setNonStrokingColor(GRAY, GRAY, GRAY);
+			cs.setNonStrokingColor(INK, INK, INK);
 			cs.setFont(fontRegular, BACK_LABEL_FONT_SIZE);
 			cs.newLineAtOffset(labelX, labelY);
 			cs.showText(label);
@@ -363,6 +315,9 @@ public class PdfGeneratorService {
 				cs.showText(displayUrl);
 				cs.endText();
 			}
+		}
+		finally {
+			cs.restoreGraphicsState();
 		}
 	}
 
@@ -475,10 +430,13 @@ public class PdfGeneratorService {
 		}
 	}
 
-	private void drawCuttingLines(PDDocument document, PDPage page, float pageWidth, float pageHeight, int gridColumns,
-			int gridRows, float cellWidth, float cellHeight) throws IOException {
-		try (PDPageContentStream content = new PDPageContentStream(document, page,
-				PDPageContentStream.AppendMode.APPEND, true, true)) {
+	private void drawCuttingLines(PDPageContentStream content, PdfOptions options, float pageWidth, float pageHeight,
+			int gridColumns, int gridRows, float cellWidth, float cellHeight) throws IOException {
+		if (!options.showCuttingLines()) {
+			return;
+		}
+		content.saveGraphicsState();
+		try {
 			content.setStrokingColor(LINE_GRAY, LINE_GRAY, LINE_GRAY);
 			content.setLineWidth(CUTTING_LINE_WIDTH);
 
@@ -513,6 +471,9 @@ public class PdfGeneratorService {
 				content.lineTo(pageWidth - MARGIN + CUTTING_MARK_LENGTH, y);
 				content.stroke();
 			}
+		}
+		finally {
+			content.restoreGraphicsState();
 		}
 	}
 

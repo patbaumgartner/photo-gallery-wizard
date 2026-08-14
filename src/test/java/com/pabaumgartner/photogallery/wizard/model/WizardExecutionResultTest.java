@@ -15,7 +15,7 @@ class WizardExecutionResultTest {
 		assertThat(result.eventCode()).isEqualTo("AB12");
 		assertThat(result.eventName()).isEqualTo("Klasse 1a");
 		assertThat(result.codeCount()).isEqualTo(17);
-		assertThat(result.pageCount()).isEqualTo(2);
+		assertThat(result.sheetCount()).isEqualTo(2);
 		assertThat(result.csvPath()).isEqualTo(Path.of("codes.csv"));
 		assertThat(result.pdfPath()).isEqualTo(Path.of("qr.pdf"));
 	}
