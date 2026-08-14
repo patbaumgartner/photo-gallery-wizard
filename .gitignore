@@ -36,6 +36,7 @@ build/
 ### Generated outputs ###
 gallery-output/
 schulfotos/
+logs/
 
 ### Credentials ###
 configuration/picpeak-credentials.properties

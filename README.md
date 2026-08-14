@@ -179,6 +179,12 @@ Hidden files such as macOS `._photo.jpg` sidecars and `.DS_Store` are ignored. A
 
 Credentials are sent to `app.schulfotos.base-url` (CSV upload) and `app.picpeak.api-url` (PicPeak login). Both are refused over plain `http://` unless the host is loopback or a private network address, so a mistyped URL cannot leak the gallery password over the internet. Use `https://` for anything reachable from outside your network.
 
+### Logging
+
+The TUI owns the terminal, so nothing is written to the console while the wizard is running. Instead, the application logs to `logs/photo-gallery-wizard.log` next to the working directory, rotated daily and kept for seven days. Start there when a step reports an error — the TUI only shows a shortened message, while the log holds the full context (HTTP status codes, file paths, stack traces).
+
+Change the location with `logging.file.name`, or raise the detail level with `logging.level.com.pabaumgartner.photogallery=DEBUG`.
+
 ## Configuration
 
 Spring Boot relaxed binding applies, so properties can be set in `application.properties`, environment variables, or command-line flags.
