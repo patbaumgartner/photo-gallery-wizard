@@ -424,7 +424,7 @@ public class PdfGeneratorService {
 		}
 		String resourcePath = path.startsWith(RESOURCES_PREFIX) ? "/" + path.substring(RESOURCES_PREFIX.length())
 				: (path.startsWith("/") ? path : "/" + path);
-		try (InputStream is = getClass().getResourceAsStream(resourcePath)) {
+		try (InputStream is = PdfGeneratorService.class.getResourceAsStream(resourcePath)) {
 			if (is == null) {
 				LOGGER.warn("Logo '{}' not found as file or classpath resource", path);
 				return null;
