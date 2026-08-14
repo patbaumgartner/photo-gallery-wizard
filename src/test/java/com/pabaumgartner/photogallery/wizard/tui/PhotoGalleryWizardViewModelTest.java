@@ -22,7 +22,7 @@ class PhotoGalleryWizardViewModelTest {
 				executionStage, watermarkInProgress, watermarkProgress, watermarkStage, uploadInProgress,
 				uploadProgress, uploadStage, executionResult, List.of(), 0, List.of(), "", folderCodes, List.of(), 0,
 				watermarkResult, uploadResult, "", null, "https://base", "https://gallery", Path.of("csv"),
-				Path.of("pdf"), 200, 3, 4, totalSteps, "wm.png", 1200);
+				Path.of("pdf"), 200, 3, 4, totalSteps, "wm.png", 1200, 0.9f, "-watermarked");
 	}
 
 	@Test

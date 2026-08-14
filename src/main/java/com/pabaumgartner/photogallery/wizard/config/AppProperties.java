@@ -1,5 +1,6 @@
 package com.pabaumgartner.photogallery.wizard.config;
 
+import java.util.Locale;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
 
@@ -12,7 +13,7 @@ public record AppProperties(String eventCode, String eventName) {
 			eventCode = "";
 		}
 		if (!eventCode.isBlank()) {
-			eventCode = eventCode.trim().toUpperCase();
+			eventCode = eventCode.trim().toUpperCase(Locale.ROOT);
 			if (!eventCode.matches("^[A-Z0-9]{4}$")) {
 				throw new IllegalArgumentException(
 						"app.event-code must be exactly 4 alphanumeric characters, got: '" + eventCode + "'");

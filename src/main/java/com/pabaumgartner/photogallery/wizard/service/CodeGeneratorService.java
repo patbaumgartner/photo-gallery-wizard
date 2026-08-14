@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 
 import com.pabaumgartner.photogallery.wizard.config.SchulfotosProperties;
 import com.pabaumgartner.photogallery.wizard.model.GalleryCode;
@@ -57,7 +58,7 @@ public class CodeGeneratorService {
 		if (eventCode == null || eventCode.isBlank()) {
 			throw new IllegalArgumentException("Event code must not be empty");
 		}
-		eventCode = eventCode.trim().toUpperCase();
+		eventCode = eventCode.trim().toUpperCase(Locale.ROOT);
 		if (!eventCode.matches("^[A-Z0-9]{4}$")) {
 			throw new IllegalArgumentException(
 					"Event code must be exactly 4 alphanumeric characters, got: '" + eventCode + "'");

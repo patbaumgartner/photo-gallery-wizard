@@ -7,7 +7,10 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
@@ -32,6 +35,8 @@ import dev.tamboui.toolkit.event.EventResult;
 import dev.tamboui.tui.TuiConfig;
 import dev.tamboui.tui.event.KeyCode;
 import dev.tamboui.widgets.form.FormState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import static com.pabaumgartner.photogallery.wizard.tui.TuiPalette.BACKGROUND;
@@ -44,6 +49,8 @@ import static dev.tamboui.toolkit.Toolkit.formField;
 @Component
 public class PhotoGalleryWizardTui {
 
+	private static final Logger LOGGER = LoggerFactory.getLogger(PhotoGalleryWizardTui.class);
+
 	private static final DateTimeFormatter GERMAN_DATE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
 	private static final DateTimeFormatter ISO_DATE = DateTimeFormatter.ISO_LOCAL_DATE;
@@ -55,6 +62,8 @@ public class PhotoGalleryWizardTui {
 	private final PhotoGalleryWizardController controller = new PhotoGalleryWizardController(state);
 
 	private final UiEventQueue uiEvents = new UiEventQueue();
+
+	private final Map<Path, CsvReadResult> csvCache = new HashMap<>();
 
 	private final FormState form;
 
@@ -468,6 +477,7 @@ public class PhotoGalleryWizardTui {
 	}
 
 	private void scanCsvFiles() {
+		csvCache.clear();
 		try {
 			state.availableCsvFiles(folderStructureService.listCsvFiles(schulfotosRootDir()));
 		}
@@ -547,7 +557,8 @@ public class PhotoGalleryWizardTui {
 				schulfotosProperties.baseUrl(), schulfotosProperties.galleryUrl(), schulfotosCsvPath(),
 				schulfotosPdfPath(), schulfotosProperties.qrSize(), schulfotosProperties.gridColumns(),
 				schulfotosProperties.gridRows(), totalSteps(), imageProperties.watermarkPath(),
-				imageProperties.resizeMaxEdge());
+				imageProperties.resizeMaxEdge(), imageProperties.jpegQuality(),
+				schulfotosProperties.watermarkedSuffix());
 	}
 
 	private FormFieldElement classNameField() {
@@ -662,17 +673,24 @@ public class PhotoGalleryWizardTui {
 	private FolderCsvMatch findFolderCsvMatch(String folderName) {
 		List<Path> csvFiles = state.availableCsvFiles();
 		for (int i = 0; i < csvFiles.size(); i++) {
-			try {
-				CsvReadResult readResult = csvReaderService.readCodes(csvFiles.get(i));
-				if (folderName.equals(eventFolderName(readResult))) {
-					return new FolderCsvMatch(i, readResult);
-				}
-			}
-			catch (IOException ex) {
-				continue;
+			CsvReadResult readResult = readCsvCached(csvFiles.get(i));
+			if (readResult != null && folderName.equals(eventFolderName(readResult))) {
+				return new FolderCsvMatch(i, readResult);
 			}
 		}
 		return null;
+	}
+
+	private CsvReadResult readCsvCached(Path csvFile) {
+		return csvCache.computeIfAbsent(csvFile, path -> {
+			try {
+				return csvReaderService.readCodes(path);
+			}
+			catch (IOException ex) {
+				LOGGER.debug("Could not read {}: {}", path, ex.getMessage());
+				return null;
+			}
+		});
 	}
 
 	private String eventFolderName(CsvReadResult readResult) {
@@ -692,7 +710,7 @@ public class PhotoGalleryWizardTui {
 	}
 
 	private String normalizeEventCode(String value) {
-		return blankFallback(value, "").trim().toUpperCase();
+		return blankFallback(value, "").trim().toUpperCase(Locale.ROOT);
 	}
 
 	private boolean isPositiveInteger(String value) {

@@ -58,23 +58,23 @@ final class PhotoGalleryWizardWatermarkStepView {
 				.length(1));
 		}
 		else {
-			List<Element> folderOptions = new ArrayList<>();
-			for (int i = 0; i < viewModel.availableEventFolders().size(); i++) {
-				folderOptions
-					.add(PhotoGalleryWizardUi.previewLine(i == viewModel.selectedFolderIndex() ? "▶ Ausgewählt" : " ",
-							viewModel.availableEventFolders().get(i).getFileName().toString(), accent));
-			}
+			List<String> folderNames = viewModel.availableEventFolders()
+				.stream()
+				.map(path -> path.getFileName().toString())
+				.toList();
+			List<Element> folderOptions = new ArrayList<>(
+					PhotoGalleryWizardUi.selectablePreviewLines(folderNames, viewModel.selectedFolderIndex(), accent));
 			lines.add(PhotoGalleryWizardUi.previewCard("Verfügbare Event-Ordner", folderOptions, PINK_NEON));
 			lines.add(text(" ").length(1));
 			lines.add(PhotoGalleryWizardUi.previewCard("Ausgewählter Event-Ordner", selectedFolderSummary(viewModel),
 					PINK_NEON));
 			lines.add(text(" ").length(1));
-			lines.add(PhotoGalleryWizardUi.previewCard("Verarbeitung",
-					List.of(PhotoGalleryWizardUi.previewLine("Skalierung",
-							viewModel.resizeMaxEdge() + " px längste Kante", TEXT_PRIMARY),
-							PhotoGalleryWizardUi.previewLine("Wasserzeichen", viewModel.watermarkPath(), TEXT_PRIMARY),
-							PhotoGalleryWizardUi.previewLine("Ausgabe", "JPEG mit 90% Qualität in -watermarked Ordnern",
-									TEXT_PRIMARY)),
+			lines.add(PhotoGalleryWizardUi.previewCard("Verarbeitung", List.of(
+					PhotoGalleryWizardUi.previewLine("Skalierung", viewModel.resizeMaxEdge() + " px längste Kante",
+							TEXT_PRIMARY),
+					PhotoGalleryWizardUi.previewLine("Wasserzeichen", viewModel.watermarkPath(), TEXT_PRIMARY),
+					PhotoGalleryWizardUi.previewLine("Ausgabe", "JPEG mit " + Math.round(viewModel.jpegQuality() * 100)
+							+ "% Qualität in " + viewModel.watermarkedSuffix() + " Ordnern", TEXT_PRIMARY)),
 					PINK_NEON));
 		}
 		return panel("Skalieren & Wasserzeichen", column(lines.toArray(new Element[0]))).rounded()

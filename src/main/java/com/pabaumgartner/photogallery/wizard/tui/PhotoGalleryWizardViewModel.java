@@ -18,7 +18,7 @@ record PhotoGalleryWizardViewModel(PhotoGalleryWizardStep activeStep, String val
 		ImageProcessingService.ImageProcessingResult watermarkResult, PicPeakService.UploadResult uploadResult,
 		String uploadMessage, WizardRequest requestPreview, String baseUrl, String galleryUrl, Path csvPath,
 		Path pdfPath, int qrSize, int gridColumns, int gridRows, int totalSteps, String watermarkPath,
-		int resizeMaxEdge) {
+		int resizeMaxEdge, float jpegQuality, String watermarkedSuffix) {
 
 	String currentStepTitle() {
 		return activeStep.title();
