@@ -89,6 +89,8 @@ public class PdfGeneratorService {
 
 	private static final String UNSUPPORTED_CHARACTER_REPLACEMENT = "?";
 
+	private static final int MAX_LOGO_BYTES = 16 * 1024 * 1024;
+
 	private static final float INK = 0.0f;
 
 	private static final float LINE_GRAY = 0.75f;
@@ -139,11 +141,15 @@ public class PdfGeneratorService {
 					for (int i = startI; i < endI; i++) {
 						int indexOnPage = i - startI;
 						GalleryCode code = codes.get(i);
+						BufferedImage qrCode = qrImages.get(code);
+						if (qrCode == null) {
+							throw new IOException("No QR code image was generated for " + code.code());
+						}
 						float innerX = MARGIN + (indexOnPage % gridColumns) * cellWidth + CELL_PADDING;
 						float innerY = pageHeight - MARGIN - (indexOnPage / gridColumns + 1) * cellHeight
 								+ CELL_PADDING;
-						PDImageXObject qrImage = PDImageXObject.createFromByteArray(document,
-								toByteArray(qrImages.get(code)), "qr-" + code.code());
+						PDImageXObject qrImage = PDImageXObject.createFromByteArray(document, toByteArray(qrCode),
+								"qr-" + code.code());
 						drawFrontCell(content, code, qrImage, innerX, innerY, innerWidth, innerHeight, qrSize, fontBold,
 								fontRegular, options);
 					}
@@ -389,7 +395,13 @@ public class PdfGeneratorService {
 			connection.setReadTimeout(logoReadTimeoutMs);
 			byte[] imageData;
 			try (InputStream inputStream = connection.getInputStream()) {
-				imageData = inputStream.readAllBytes();
+				// A logo served from an unexpected endpoint must not be able to
+				// exhaust the heap.
+				imageData = inputStream.readNBytes(MAX_LOGO_BYTES + 1);
+			}
+			if (imageData.length > MAX_LOGO_BYTES) {
+				LOGGER.error("Logo at '{}' is larger than {} bytes; skipping it", logoUrl, MAX_LOGO_BYTES);
+				return null;
 			}
 			return createLogoImageFromBytes(document, imageData, logoUrl);
 		}

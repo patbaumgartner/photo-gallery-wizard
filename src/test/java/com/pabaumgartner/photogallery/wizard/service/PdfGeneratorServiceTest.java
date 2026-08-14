@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class PdfGeneratorServiceTest {
 
@@ -292,6 +293,17 @@ class PdfGeneratorServiceTest {
 		assertThat(PdfGeneratorService.toEncodable(font, "Klasse 3ä – ok")).isEqualTo("Klasse 3ä – ok");
 		assertThat(PdfGeneratorService.toEncodable(font, "Ćwiczenia")).isEqualTo("?wiczenia");
 		assertThat(PdfGeneratorService.toEncodable(font, "a\uD83D\uDE00b")).isEqualTo("a?b");
+	}
+
+	@Test
+	void aMissingQrImageIsReportedWithTheCodeItBelongsTo() {
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ", "pw"));
+		PdfOptions options = new PdfOptions(tempDir.resolve("missing.pdf"), 3, 4, false, "Event", "https://base.com",
+				"", "C", "P");
+
+		assertThatThrownBy(() -> pdfService.createPdf(codes, new LinkedHashMap<>(), options))
+			.isInstanceOf(IOException.class)
+			.hasMessageContaining("ABCD-1234-WXYZ");
 	}
 
 }
