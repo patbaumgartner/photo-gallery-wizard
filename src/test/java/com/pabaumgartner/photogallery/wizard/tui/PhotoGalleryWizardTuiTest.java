@@ -43,6 +43,8 @@ class PhotoGalleryWizardTuiTest {
 
 	private PhotoGalleryWizardTui tui;
 
+	private LocalDate seededOn;
+
 	private static SchulfotosProperties schulfotosProperties(String outputDirectory) {
 		return new SchulfotosProperties("https://example.com/schulfotos", "https://example.com/schulfotos/?code=", 17,
 				200, 3, 4, true, "GALERIE CODE", "GALERIE PASSWORT", outputDirectory, "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -96,6 +98,9 @@ class PhotoGalleryWizardTuiTest {
 
 	@BeforeEach
 	void setUp() {
+		// Captured next to construction: the form seeds today's date, and comparing
+		// against a later LocalDate.now() would fail if the test straddles midnight.
+		seededOn = LocalDate.now();
 		tui = createTui(new AppProperties("WXYZ", "Klasse 1b"));
 	}
 
@@ -104,7 +109,7 @@ class PhotoGalleryWizardTuiTest {
 		assertThat(tui.formState().textValue("schoolEventCode")).isEqualTo("WXYZ");
 		assertThat(tui.formState().textValue("schoolClassName")).isEqualTo("Klasse 1b");
 		assertThat(tui.formState().textValue("schoolCodeCount")).isEqualTo("17");
-		assertThat(tui.formState().textValue("schoolShootingDate")).isEqualTo(LocalDate.now().format(GERMAN_DATE));
+		assertThat(tui.formState().textValue("schoolShootingDate")).isEqualTo(seededOn.format(GERMAN_DATE));
 		assertThat(tui.viewModel().activeStep()).isEqualTo(PhotoGalleryWizardStep.SCHULFOTOS);
 	}
 
