@@ -134,9 +134,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <!-- Loading the Mockito agent up front; self-attaching stops working on newer JDKs. -->
-          <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} --add-opens java.base/java.lang=ALL-UNNAMED
-                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED</argLine>
+          <!-- Loading the Mockito agent up front; self-attaching stops working on newer JDKs. Keep this on one line: a rewrap that splits an option from its value breaks the test JVM. -->
+          <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED</argLine>
         </configuration>
       </plugin>
       <plugin>

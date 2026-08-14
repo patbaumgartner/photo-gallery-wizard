@@ -6,5 +6,10 @@
     // format-on-save for Java here and rely on the Maven plugin instead.
     "[java]": {
         "editor.formatOnSave": false
+    },
+    // The XML formatter rewraps pom.xml, which can split a JVM option in
+    // <argLine> from its value and break the test run.
+    "[xml]": {
+        "editor.formatOnSave": false
     }
 }
