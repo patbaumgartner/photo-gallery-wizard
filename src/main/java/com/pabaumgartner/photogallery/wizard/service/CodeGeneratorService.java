@@ -17,9 +17,9 @@ public class CodeGeneratorService {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CodeGeneratorService.class);
 
-	private static final String CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-
 	private static final int GROUP_LENGTH = 4;
+
+	private static final int RANDOM_GROUPS = 2;
 
 	private static final String PASSWORD_DIGITS = "234679";
 
@@ -36,12 +36,17 @@ public class CodeGeneratorService {
 
 	private static final int MAX_PASSWORD_GENERATION_ATTEMPTS = 100;
 
+	private static final int MAX_CODE_ATTEMPTS_PER_CODE = 100;
+
 	private final int passwordLength;
+
+	private final String codeCharset;
 
 	private final SecureRandom random = new SecureRandom();
 
 	public CodeGeneratorService(SchulfotosProperties schulfotosProperties) {
 		this.passwordLength = schulfotosProperties.passwordLength();
+		this.codeCharset = schulfotosProperties.codeCharset();
 		if (PASSWORD_CHARSET.length() < passwordLength) {
 			throw new IllegalStateException("PASSWORD_CHARSET length (" + PASSWORD_CHARSET.length()
 					+ ") must be >= passwordLength (" + passwordLength + ")");
@@ -60,38 +65,30 @@ public class CodeGeneratorService {
 		if (count <= 0) {
 			throw new IllegalArgumentException("Code count must be positive, got: " + count);
 		}
+		long distinctCodeCapacity = distinctCodeCapacity();
+		if (count > distinctCodeCapacity) {
+			throw new IllegalArgumentException("Cannot generate " + count + " unique codes from a "
+					+ codeCharset.length() + "-character charset, which allows at most " + distinctCodeCapacity);
+		}
 
 		LinkedHashSet<String> uniqueCodes = new LinkedHashSet<>();
-		int maxAttempts = count * 10;
-		int attempts = 0;
+		long maxAttempts = Math.max((long) count * MAX_CODE_ATTEMPTS_PER_CODE, MAX_CODE_ATTEMPTS_PER_CODE);
+		long attempts = 0;
 
 		while (uniqueCodes.size() < count && attempts < maxAttempts) {
-			String group2 = randomGroup();
-			String group3 = randomGroup();
-			String code = eventCode + "-" + group2 + "-" + group3;
-			uniqueCodes.add(code);
+			uniqueCodes.add(eventCode + "-" + randomGroup() + "-" + randomGroup());
 			attempts++;
 		}
 
 		if (uniqueCodes.size() < count) {
-			LOGGER.warn("Could only generate {} unique codes out of {} requested", uniqueCodes.size(), count);
+			throw new IllegalStateException("Could only generate " + uniqueCodes.size() + " unique codes out of "
+					+ count + " requested after " + maxAttempts + " attempts");
 		}
 
 		LinkedHashSet<String> usedPasswords = new LinkedHashSet<>();
 		List<GalleryCode> codes = new ArrayList<>();
 		for (String code : uniqueCodes) {
-			String password;
-			int passwordAttempts = 0;
-			do {
-				password = generatePassword();
-				passwordAttempts++;
-			}
-			while (!usedPasswords.add(password) && passwordAttempts < MAX_PASSWORD_GENERATION_ATTEMPTS);
-			if (passwordAttempts >= MAX_PASSWORD_GENERATION_ATTEMPTS) {
-				LOGGER.warn("Could not generate a unique password for code '{}' after {} attempts", code,
-						MAX_PASSWORD_GENERATION_ATTEMPTS);
-			}
-			codes.add(new GalleryCode(code, password));
+			codes.add(new GalleryCode(code, uniquePassword(usedPasswords, code)));
 		}
 
 		LOGGER.atInfo()
@@ -101,10 +98,29 @@ public class CodeGeneratorService {
 		return codes;
 	}
 
+	private String uniquePassword(LinkedHashSet<String> usedPasswords, String code) {
+		for (int attempt = 0; attempt < MAX_PASSWORD_GENERATION_ATTEMPTS; attempt++) {
+			String password = generatePassword();
+			if (usedPasswords.add(password)) {
+				return password;
+			}
+		}
+		throw new IllegalStateException("Could not generate a unique password for code '" + code + "' after "
+				+ MAX_PASSWORD_GENERATION_ATTEMPTS + " attempts");
+	}
+
+	private long distinctCodeCapacity() {
+		long capacity = 1;
+		for (int i = 0; i < GROUP_LENGTH * RANDOM_GROUPS && capacity <= Integer.MAX_VALUE; i++) {
+			capacity *= codeCharset.length();
+		}
+		return capacity;
+	}
+
 	private String randomGroup() {
 		StringBuilder sb = new StringBuilder(GROUP_LENGTH);
 		for (int i = 0; i < GROUP_LENGTH; i++) {
-			sb.append(CHARSET.charAt(random.nextInt(CHARSET.length())));
+			sb.append(codeCharset.charAt(random.nextInt(codeCharset.length())));
 		}
 		return sb.toString();
 	}

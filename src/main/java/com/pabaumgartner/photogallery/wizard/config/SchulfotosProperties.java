@@ -1,5 +1,6 @@
 package com.pabaumgartner.photogallery.wizard.config;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -11,6 +12,12 @@ public record SchulfotosProperties(String baseUrl, String galleryUrl, int defaul
 		int passwordLength) {
 
 	private static final Pattern PATH_SEPARATORS = Pattern.compile("[\\\\/]|(^|[\\\\/])\\.{1,2}([\\\\/]|$)");
+
+	private static final Pattern CODE_CHARSET_ALPHABET = Pattern.compile("[A-Z0-9]+");
+
+	private static final int MIN_CODE_CHARSET_SIZE = 2;
+
+	private static final int MIN_PASSWORD_LENGTH = 4;
 
 	public SchulfotosProperties {
 		if (baseUrl == null || baseUrl.isBlank()) {
@@ -43,6 +50,7 @@ public record SchulfotosProperties(String baseUrl, String galleryUrl, int defaul
 		if (codeCharset == null || codeCharset.isBlank()) {
 			codeCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 		}
+		codeCharset = normalizeCodeCharset(codeCharset);
 		if (logoPath == null || logoPath.isBlank()) {
 			logoPath = "configuration/logo.png";
 		}
@@ -58,9 +66,30 @@ public record SchulfotosProperties(String baseUrl, String galleryUrl, int defaul
 		if (passwordLength <= 0) {
 			passwordLength = 9;
 		}
+		if (passwordLength < MIN_PASSWORD_LENGTH) {
+			throw new IllegalArgumentException("app.schulfotos.password-length must be at least " + MIN_PASSWORD_LENGTH
+					+ " to fit one upper-case, lower-case, digit and special character, got: " + passwordLength);
+		}
 		requireSingleSegment("app.schulfotos.klassenfoto-folder", klassenfotoFolder);
 		requireSingleSegment("app.schulfotos.portrait-prefix", portraitPrefix);
 		requireSingleSegment("app.schulfotos.watermarked-suffix", watermarkedSuffix);
+	}
+
+	private static String normalizeCodeCharset(String codeCharset) {
+		String upperCase = codeCharset.trim().toUpperCase(Locale.ROOT);
+		String distinct = upperCase.codePoints()
+			.distinct()
+			.collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+			.toString();
+		if (!CODE_CHARSET_ALPHABET.matcher(distinct).matches()) {
+			throw new IllegalArgumentException(
+					"app.schulfotos.code-charset must only contain A-Z and 0-9, got: '" + codeCharset + "'");
+		}
+		if (distinct.length() < MIN_CODE_CHARSET_SIZE) {
+			throw new IllegalArgumentException("app.schulfotos.code-charset must contain at least "
+					+ MIN_CODE_CHARSET_SIZE + " distinct characters, got: '" + codeCharset + "'");
+		}
+		return distinct;
 	}
 
 	private static void requireSingleSegment(String property, String value) {

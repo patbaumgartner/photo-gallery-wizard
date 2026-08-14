@@ -3,6 +3,7 @@ package com.pabaumgartner.photogallery.wizard.config;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SchulfotosPropertiesTest {
 
@@ -74,6 +75,56 @@ class SchulfotosPropertiesTest {
 		assertThat(props.gridColumns()).isEqualTo(3);
 		assertThat(props.gridRows()).isEqualTo(4);
 		assertThat(props.passwordLength()).isEqualTo(9);
+	}
+
+	@Test
+	void codeCharsetIsUpperCasedAndDeduplicated() {
+		assertThat(propertiesWithCodeCharset("abc").codeCharset()).isEqualTo("ABC");
+		assertThat(propertiesWithCodeCharset("AABBC").codeCharset()).isEqualTo("ABC");
+		assertThat(propertiesWithCodeCharset("  a1b2  ").codeCharset()).isEqualTo("A1B2");
+	}
+
+	@Test
+	void codeCharsetRejectsCharactersAGalleryCodeCanNeverContain() {
+		assertThatThrownBy(() -> propertiesWithCodeCharset("ABC-DEF")).isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("must only contain A-Z and 0-9");
+		assertThatThrownBy(() -> propertiesWithCodeCharset("ÄÖÜ")).isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("must only contain A-Z and 0-9");
+	}
+
+	@Test
+	void codeCharsetRejectsTooFewDistinctCharacters() {
+		assertThatThrownBy(() -> propertiesWithCodeCharset("AAAA")).isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("at least 2 distinct characters");
+	}
+
+	@Test
+	void passwordLengthTooShortForTheRequiredCharacterClassesIsRejected() {
+		assertThatThrownBy(() -> propertiesWithPasswordLength(3)).isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("must be at least 4");
+		assertThat(propertiesWithPasswordLength(4).passwordLength()).isEqualTo(4);
+	}
+
+	@Test
+	void folderNameFragmentsMustNotContainPathSeparators() {
+		assertThatThrownBy(() -> new SchulfotosProperties(null, null, 0, 0, 0, 0, false, null, null, null, null, null,
+				"../escape", null, null, 0))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("app.schulfotos.klassenfoto-folder");
+		assertThatThrownBy(() -> new SchulfotosProperties(null, null, 0, 0, 0, 0, false, null, null, null, null, null,
+				null, "a/b", null, 0))
+			.isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("app.schulfotos.portrait-prefix");
+	}
+
+	private static SchulfotosProperties propertiesWithCodeCharset(String codeCharset) {
+		return new SchulfotosProperties(null, null, 0, 0, 0, 0, false, null, null, null, codeCharset, null, null, null,
+				null, 0);
+	}
+
+	private static SchulfotosProperties propertiesWithPasswordLength(int passwordLength) {
+		return new SchulfotosProperties(null, null, 0, 0, 0, 0, false, null, null, null, null, null, null, null, null,
+				passwordLength);
 	}
 
 }

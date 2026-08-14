@@ -35,6 +35,38 @@ class CodeGeneratorServiceTest {
 				0);
 	}
 
+	private static SchulfotosProperties propertiesWithCodeCharset(String codeCharset) {
+		return new SchulfotosProperties(null, null, 0, 0, 0, 0, false, null, null, null, codeCharset, null, null, null,
+				null, 0);
+	}
+
+	@Test
+	void generatedCodesOnlyUseTheConfiguredCodeCharset() {
+		CodeGeneratorService restricted = new CodeGeneratorService(propertiesWithCodeCharset("AB12"));
+
+		List<GalleryCode> codes = restricted.generateCodes("ZZZZ", 20);
+
+		assertThat(codes).allSatisfy(code -> assertThat(code.code()).matches("^ZZZZ-[AB12]{4}-[AB12]{4}$"));
+	}
+
+	@Test
+	void generateCodesRejectsMoreCodesThanTheCharsetCanRepresent() {
+		CodeGeneratorService tiny = new CodeGeneratorService(propertiesWithCodeCharset("AB"));
+
+		assertThatThrownBy(() -> tiny.generateCodes("ABCD", 257)).isInstanceOf(IllegalArgumentException.class)
+			.hasMessageContaining("at most 256");
+	}
+
+	@Test
+	void generateCodesReturnsExactlyTheRequestedCountForASmallCharset() {
+		CodeGeneratorService tiny = new CodeGeneratorService(propertiesWithCodeCharset("AB"));
+
+		List<GalleryCode> codes = tiny.generateCodes("ABCD", 256);
+
+		assertThat(codes).hasSize(256);
+		assertThat(codes.stream().map(GalleryCode::code).distinct()).hasSize(256);
+	}
+
 	@BeforeEach
 	void setUp() {
 		service = new CodeGeneratorService(defaultSchulfotosProperties());
