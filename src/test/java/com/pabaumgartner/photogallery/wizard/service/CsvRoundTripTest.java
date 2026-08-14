@@ -83,4 +83,19 @@ class CsvRoundTripTest {
 		assertThat(result.codes().getFirst().password()).isEmpty();
 	}
 
+	@Test
+	void roundTripKeepsSeparatorsAndQuotesInsideTheClassName() throws IOException {
+		CsvWriterService writer = new CsvWriterService();
+		CsvReaderService reader = new CsvReaderService();
+		String className = "Klasse 3a, \"Gruppe B\"; Süd";
+
+		Path csv = tempDir.resolve("quoted.csv");
+		writer.writeCodes(List.of(new GalleryCode("ABCD-1234-WXYZ", "pw")), csv, className,
+				"https://gallery.com/?code=");
+
+		CsvReadResult result = reader.readCodes(csv);
+		assertThat(result.eventName()).isEqualTo(className);
+		assertThat(result.codes()).hasSize(1);
+	}
+
 }
