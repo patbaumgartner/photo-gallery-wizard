@@ -159,6 +159,15 @@ class HttpEndpointsTest {
 	}
 
 	@Test
+	void redirectsToAnotherHostAreRefusedEvenOverHttps() {
+		serve("/offsite", exchange -> redirect(exchange, 308, "https://evil.example.com/collect"));
+
+		assertThatThrownBy(() -> HttpEndpoints.send(client, post("/offsite", "payload")))
+			.isInstanceOf(IOException.class)
+			.hasMessageContaining("Refusing to follow a redirect");
+	}
+
+	@Test
 	void redirectLoopsAreAbandoned() {
 		serve("/loop", exchange -> redirect(exchange, 308, "/loop"));
 

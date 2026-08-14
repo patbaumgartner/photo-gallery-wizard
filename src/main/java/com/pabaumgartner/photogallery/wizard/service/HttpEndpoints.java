@@ -85,6 +85,7 @@ final class HttpEndpoints {
 
 		URI target = request.uri().resolve(location);
 		requireCredentialSafeTransport(target);
+		requireSameHost(request.uri(), target);
 
 		// Only 307 and 308 replay the method and body; the older codes degrade to a
 		// bodyless GET, which is what the JDK's own redirect handling does.
@@ -113,6 +114,18 @@ final class HttpEndpoints {
 		}
 		throw new IOException("Refusing to send credentials to " + uri.getScheme() + "://" + uri.getHost()
 				+ " in clear text; use https, or a loopback or private network address");
+	}
+
+	/**
+	 * Credentials travel in the request body and in the {@code admin_token} cookie, so a
+	 * redirect off the configured host would hand them to a different origin.
+	 */
+	private static void requireSameHost(URI from, URI to) throws IOException {
+		if (to.getHost() != null && to.getHost().equalsIgnoreCase(from.getHost())) {
+			return;
+		}
+		throw new IOException(
+				"Refusing to follow a redirect from " + from.getHost() + " to " + to + " while carrying credentials");
 	}
 
 	static String truncateForLog(String body) {
