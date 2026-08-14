@@ -4,12 +4,14 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -49,7 +51,7 @@ public class PicPeakService {
 	@Autowired
 	public PicPeakService(PicPeakProperties picPeakProperties, SchulfotosProperties schulfotosProperties,
 			CodeGeneratorService codeGeneratorService) {
-		this(picPeakProperties, schulfotosProperties, codeGeneratorService, HttpClient.newHttpClient());
+		this(picPeakProperties, schulfotosProperties, codeGeneratorService, HttpEndpoints.newClient());
 	}
 
 	PicPeakService(PicPeakProperties picPeakProperties, SchulfotosProperties schulfotosProperties,
@@ -280,6 +282,7 @@ public class PicPeakService {
 			String endpoint = picPeakProperties.apiUrl() + String.format(endpointPattern, eventId);
 			HttpRequest.Builder builder = HttpRequest.newBuilder()
 				.uri(URI.create(endpoint))
+				.timeout(HttpEndpoints.API_TIMEOUT)
 				.header("Accept", "application/json")
 				.header("Cookie", "admin_token=" + token);
 			if ("DELETE".equals(method)) {
@@ -292,6 +295,7 @@ public class PicPeakService {
 			return response.statusCode() >= 200 && response.statusCode() < 300;
 		}
 		catch (Exception ex) {
+			HttpEndpoints.restoreInterruptFlag(ex);
 			LOGGER.debug("Bulk clear endpoint failed for event {} ({} {}): {}", eventId, method, endpointPattern,
 					ex.getMessage());
 			return false;
@@ -302,6 +306,7 @@ public class PicPeakService {
 		try {
 			HttpRequest request = HttpRequest.newBuilder()
 				.uri(URI.create(picPeakProperties.apiUrl() + "/api/admin/events/" + eventId + "/photos"))
+				.timeout(HttpEndpoints.API_TIMEOUT)
 				.header("Accept", "application/json")
 				.header("Cookie", "admin_token=" + token)
 				.GET()
@@ -317,6 +322,7 @@ public class PicPeakService {
 			return Optional.of(ids);
 		}
 		catch (Exception ex) {
+			HttpEndpoints.restoreInterruptFlag(ex);
 			LOGGER.debug("Could not list photos for event {}: {}", eventId, ex.getMessage());
 			return Optional.empty();
 		}
@@ -369,6 +375,7 @@ public class PicPeakService {
 		try {
 			HttpRequest request = HttpRequest.newBuilder()
 				.uri(URI.create(endpoint))
+				.timeout(HttpEndpoints.API_TIMEOUT)
 				.header("Accept", "application/json")
 				.header("Cookie", "admin_token=" + token)
 				.DELETE()
@@ -377,6 +384,7 @@ public class PicPeakService {
 			return response.statusCode() >= 200 && response.statusCode() < 300;
 		}
 		catch (Exception ex) {
+			HttpEndpoints.restoreInterruptFlag(ex);
 			LOGGER.debug("Delete photo endpoint failed ({}): {}", endpoint, ex.getMessage());
 			return false;
 		}
@@ -388,6 +396,9 @@ public class PicPeakService {
 			return null;
 		}
 		try {
+			URI loginUri = URI.create(picPeakProperties.apiUrl() + "/api/auth/admin/login");
+			HttpEndpoints.requireCredentialSafeTransport(loginUri);
+
 			ObjectNode body = objectMapper.createObjectNode();
 			body.put("username", picPeakProperties.username());
 			body.put("password", picPeakProperties.password());
@@ -395,7 +406,8 @@ public class PicPeakService {
 			String requestBody = objectMapper.writeValueAsString(body);
 
 			HttpRequest request = HttpRequest.newBuilder()
-				.uri(URI.create(picPeakProperties.apiUrl() + "/api/auth/admin/login"))
+				.uri(loginUri)
+				.timeout(HttpEndpoints.API_TIMEOUT)
 				.header("Content-Type", "application/json")
 				.header("Accept", "application/json")
 				.POST(HttpRequest.BodyPublishers.ofString(requestBody))
@@ -404,7 +416,7 @@ public class PicPeakService {
 			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
 			if (response.statusCode() != 200) {
-				LOGGER.error("PicPeak login failed with status {}: {}", response.statusCode(), response.body());
+				LOGGER.error("PicPeak login failed with status {}", response.statusCode());
 				return null;
 			}
 
@@ -427,10 +439,11 @@ public class PicPeakService {
 				}
 			}
 
-			LOGGER.error("Could not extract admin token from PicPeak login response: {}", response.body());
+			LOGGER.error("Could not extract admin token from the PicPeak login response");
 			return null;
 		}
 		catch (Exception ex) {
+			HttpEndpoints.restoreInterruptFlag(ex);
 			LOGGER.error("PicPeak login error: {}", ex.getMessage(), ex);
 			return null;
 		}
@@ -504,6 +517,7 @@ public class PicPeakService {
 
 			HttpRequest request = HttpRequest.newBuilder()
 				.uri(URI.create(picPeakProperties.apiUrl() + "/api/admin/events"))
+				.timeout(HttpEndpoints.API_TIMEOUT)
 				.header("Content-Type", "application/json")
 				.header("Accept", "application/json")
 				.header("Cookie", "admin_token=" + token)
@@ -514,7 +528,7 @@ public class PicPeakService {
 
 			if (response.statusCode() != 200 && response.statusCode() != 201) {
 				LOGGER.error("PicPeak event creation failed with status {}: {}", response.statusCode(),
-						response.body());
+						HttpEndpoints.truncateForLog(response.body()));
 				return null;
 			}
 
@@ -532,10 +546,11 @@ public class PicPeakService {
 				return new EventCreationResult(shareLinkNode.asText(), eventId);
 			}
 
-			LOGGER.error("Could not find share_link in PicPeak response: {}", response.body());
+			LOGGER.error("Could not find share_link in the PicPeak event creation response");
 			return null;
 		}
 		catch (Exception ex) {
+			HttpEndpoints.restoreInterruptFlag(ex);
 			LOGGER.error("PicPeak event creation error: {}", ex.getMessage(), ex);
 			return null;
 		}
@@ -544,44 +559,35 @@ public class PicPeakService {
 	private int uploadPhotos(String token, int eventId, List<Path> photos, Integer categoryId) {
 		try {
 			String boundary = "----PicPeakUpload" + UUID.randomUUID().toString().replace("-", "");
-			var bodyParts = new ArrayList<byte[]>();
+			List<HttpRequest.BodyPublisher> parts = new ArrayList<>();
 
 			for (Path photo : photos) {
-				String filename = photo.getFileName().toString();
-				String mimeType = filename.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
-				byte[] fileBytes = Files.readAllBytes(photo);
+				String filename = HttpEndpoints.sanitizeMultipartFilename(photo.getFileName().toString());
+				String mimeType = filename.toLowerCase(Locale.ROOT).endsWith(".png") ? "image/png" : "image/jpeg";
 
-				String partHeader = "--" + boundary + "\r\n"
-						+ "Content-Disposition: form-data; name=\"photos\"; filename=\"" + filename + "\"\r\n"
-						+ "Content-Type: " + mimeType + "\r\n\r\n";
-				bodyParts.add(partHeader.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-				bodyParts.add(fileBytes);
-				bodyParts.add("\r\n".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+				parts.add(HttpRequest.BodyPublishers.ofString(
+						"--" + boundary + "\r\n" + "Content-Disposition: form-data; name=\"photos\"; filename=\""
+								+ filename + "\"\r\n" + "Content-Type: " + mimeType + "\r\n\r\n",
+						StandardCharsets.UTF_8));
+				parts.add(HttpRequest.BodyPublishers.ofFile(photo));
+				parts.add(HttpRequest.BodyPublishers.ofString("\r\n", StandardCharsets.UTF_8));
 			}
 
 			if (categoryId != null) {
-				String catPart = "--" + boundary + "\r\n"
-						+ "Content-Disposition: form-data; name=\"category_id\"\r\n\r\n" + categoryId + "\r\n";
-				bodyParts.add(catPart.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+				parts.add(HttpRequest.BodyPublishers.ofString("--" + boundary + "\r\n"
+						+ "Content-Disposition: form-data; name=\"category_id\"\r\n\r\n" + categoryId + "\r\n",
+						StandardCharsets.UTF_8));
 			}
 
-			String closingBoundary = "--" + boundary + "--\r\n";
-			bodyParts.add(closingBoundary.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-
-			int totalSize = bodyParts.stream().mapToInt(b -> b.length).sum();
-			byte[] body = new byte[totalSize];
-			int offset = 0;
-			for (byte[] part : bodyParts) {
-				System.arraycopy(part, 0, body, offset, part.length);
-				offset += part.length;
-			}
+			parts.add(HttpRequest.BodyPublishers.ofString("--" + boundary + "--\r\n", StandardCharsets.UTF_8));
 
 			HttpRequest request = HttpRequest.newBuilder()
 				.uri(URI.create(picPeakProperties.apiUrl() + "/api/admin/events/" + eventId + "/upload"))
+				.timeout(HttpEndpoints.UPLOAD_TIMEOUT)
 				.header("Content-Type", "multipart/form-data; boundary=" + boundary)
 				.header("Accept", "application/json")
 				.header("Cookie", "admin_token=" + token)
-				.POST(HttpRequest.BodyPublishers.ofByteArray(body))
+				.POST(HttpRequest.BodyPublishers.concat(parts.toArray(new HttpRequest.BodyPublisher[0])))
 				.build();
 
 			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -592,10 +598,11 @@ public class PicPeakService {
 			}
 
 			LOGGER.error("PicPeak upload failed for event {} with status {}: {}", eventId, response.statusCode(),
-					response.body());
+					HttpEndpoints.truncateForLog(response.body()));
 			return 0;
 		}
 		catch (Exception ex) {
+			HttpEndpoints.restoreInterruptFlag(ex);
 			LOGGER.error("PicPeak upload error for event {}: {}", eventId, ex.getMessage(), ex);
 			return 0;
 		}
@@ -607,7 +614,7 @@ public class PicPeakService {
 			return files;
 		}
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory, entry -> {
-			String name = entry.getFileName().toString().toLowerCase();
+			String name = entry.getFileName().toString().toLowerCase(Locale.ROOT);
 			return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
 		})) {
 			for (Path entry : stream) {

@@ -143,6 +143,52 @@ class CsvUploadServiceTest {
 			.startsWith("multipart/form-data; boundary=");
 	}
 
+	@Test
+	void uploadRefusesToSendCredentialsOverPlainHttpToAPublicHost() throws IOException {
+		Path csvFile = tempDir.resolve("insecure.csv");
+		Files.writeString(csvFile, "data", StandardCharsets.UTF_8);
+
+		RecordingHttpClient client = new RecordingHttpClient(200, "OK");
+		CsvUploadService service = new CsvUploadService(schulfotosProperties("http://example.com/schulfotos"),
+				picPeakProperties("user@test.com", "secret"), client);
+
+		assertThatThrownBy(() -> service.upload(csvFile)).isInstanceOf(IOException.class)
+			.hasMessageContaining("Refusing to send credentials");
+		assertThat(client.requests).isEmpty();
+	}
+
+	@Test
+	void uploadAllowsPlainHttpOnLoopbackAndPrivateNetworks() throws IOException {
+		Path csvFile = tempDir.resolve("lan.csv");
+		Files.writeString(csvFile, "data", StandardCharsets.UTF_8);
+
+		for (String baseUrl : List.of("http://localhost:8080", "http://127.0.0.1:8080", "http://192.168.1.10",
+				"http://gallery.local")) {
+			RecordingHttpClient client = new RecordingHttpClient(200, "OK");
+			CsvUploadService service = new CsvUploadService(schulfotosProperties(baseUrl),
+					picPeakProperties("user@test.com", "secret"), client);
+
+			service.upload(csvFile);
+
+			assertThat(client.requests).as("expected %s to be accepted", baseUrl).hasSize(1);
+		}
+	}
+
+	@Test
+	void uploadEscapesQuotesAndNewlinesInTheCsvFilename() throws IOException {
+		Path csvFile = tempDir.resolve("od\"d\rname.csv");
+		Files.writeString(csvFile, "data", StandardCharsets.UTF_8);
+
+		RecordingBodyHttpClient client = new RecordingBodyHttpClient(200, "OK");
+		CsvUploadService service = new CsvUploadService(schulfotosProperties("https://example.com/schulfotos"),
+				picPeakProperties("user", "pass"), client);
+
+		service.upload(csvFile);
+
+		String body = new String(client.bodies.get(0), StandardCharsets.UTF_8);
+		assertThat(body).contains("filename=\"od_d_name.csv\"");
+	}
+
 	// --- Stub HttpClient ---
 
 	static class RecordingHttpClient extends HttpClient {
@@ -296,6 +342,7 @@ class CsvUploadServiceTest {
 				throws IOException, InterruptedException {
 			requests.add(request);
 			request.bodyPublisher().ifPresent(pub -> {
+				java.io.ByteArrayOutputStream collected = new java.io.ByteArrayOutputStream();
 				pub.subscribe(new java.util.concurrent.Flow.Subscriber<>() {
 					@Override
 					public void onSubscribe(java.util.concurrent.Flow.Subscription subscription) {
@@ -306,7 +353,7 @@ class CsvUploadServiceTest {
 					public void onNext(java.nio.ByteBuffer item) {
 						byte[] data = new byte[item.remaining()];
 						item.get(data);
-						bodies.add(data);
+						collected.writeBytes(data);
 					}
 
 					@Override
@@ -317,6 +364,7 @@ class CsvUploadServiceTest {
 					public void onComplete() {
 					}
 				});
+				bodies.add(collected.toByteArray());
 			});
 			return (HttpResponse<T>) new StubHttpResponse(statusCode, body, request.uri());
 		}
