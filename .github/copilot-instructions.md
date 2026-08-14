@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-Spring Boot 4.0.5 terminal application (no web server) for school-photography workflows. The interactive TUI drives a 7-step Schulfotos pipeline: gallery-code generation → CSV upload → QR-code PDF → folder creation → watermarking → PicPeak upload.
+Spring Boot 4.1.0 terminal application (no web server) for school-photography workflows. The interactive TUI drives a 7-step Schulfotos pipeline: gallery-code generation → CSV upload → QR-code PDF → folder creation → watermarking → PicPeak upload.
 
-**Java 25 · Maven 3.9+ · Spring Boot 4.0.5 · TamboUI · ZXing · PDFBox · Apache Commons CSV**
+**Java 25 · Maven 3.9+ · Spring Boot 4.1.0 · TamboUI · ZXing · PDFBox · Apache Commons CSV**
 
 ## Architecture
 

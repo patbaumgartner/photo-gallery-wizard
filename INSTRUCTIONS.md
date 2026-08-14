@@ -87,7 +87,7 @@ All properties use the `app.schulfotos` prefix.
 | `base-url` | `https://example.com/schulfotos` | Base URL for gallery pages |
 | `gallery-url` | `https://example.com/schulfotos/?code=` | URL template for gallery codes |
 | `default-code-count` | `17` | Default number of gallery codes to generate |
-| `code-charset` | `A–Z0–9` | Character set for code generation |
+| `code-charset` | `ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789` | Alphabet for the two random code groups (`A-Z0-9` only, min. 2 distinct characters) |
 | `qr-size` | `200` | QR code image size in pixels |
 | `grid-columns` | `3` | Number of columns on the PDF card grid |
 | `grid-rows` | `4` | Number of rows on the PDF card grid |
@@ -98,7 +98,7 @@ All properties use the `app.schulfotos` prefix.
 | `klassenfoto-folder` | `klassenfoto` | Folder name for class photos |
 | `portrait-prefix` | `portrait-` | Prefix for portrait folders |
 | `watermarked-suffix` | `-watermarked` | Suffix appended to output folder names |
-| `password-length` | `9` | Generated password length |
+| `password-length` | `9` | Generated password length (minimum 4) |
 
 ### PicPeak Properties
 

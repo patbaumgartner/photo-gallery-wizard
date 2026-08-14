@@ -1,4 +1,4 @@
-[![CI](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/ci.yml/badge.svg)](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/ci.yml) [![Release](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/release.yml/badge.svg)](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/release.yml) [![Java](https://img.shields.io/badge/Java-25-blue?logo=openjdk)](https://openjdk.org/) [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/ci.yml/badge.svg)](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/ci.yml) [![Release](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/release.yml/badge.svg)](https://github.com/patbaumgartner/photo-gallery-wizard/actions/workflows/release.yml) [![Java](https://img.shields.io/badge/Java-25-blue?logo=openjdk)](https://openjdk.org/) [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F?logo=spring-boot)](https://spring.io/projects/spring-boot) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 # Photo Gallery Wizard
 
@@ -159,12 +159,25 @@ During watermarking, the application strips a configurable postfix from filename
 
 Set `app.image.filename-strip-postfix=` (empty) to disable stripping and keep original filenames.
 
+Because stripping can make two source files collide (`MEL_6175.jpg` and `MEL_6175_NEU.jpg` both become `MEL_6175.jpg`, as do `photo.jpg` and `photo.png`), the watermark step checks the full set of output names before writing anything and aborts with the conflicting source files listed.
+
+### Watermark Output Is Replaced Wholesale
+
+Each run renders into a staging directory and swaps it in only after every image succeeded. A `-watermarked` folder therefore always mirrors its source folder exactly: files whose source was deleted do not linger and get uploaded, and a failed run never leaves a half-written folder behind. Treat `-watermarked` folders as generated output and do not store anything in them by hand.
+
+Hidden files such as macOS `._photo.jpg` sidecars and `.DS_Store` are ignored. Any other unreadable image fails the run and is named in the error, rather than being silently skipped.
+
 ### Upload Behavior
 
 - The generated CSV is automatically uploaded to `{base-url}/upload.php` after generation (step 3) when PicPeak credentials are configured.
 - Each gallery receives all files from `klassenfoto-watermarked/`.
-- Each gallery also receives its own `portrait-N-watermarked/` files.
-- Rows without a PicPeak event ID are skipped.
+- CSV row _N_ receives `portrait-N-watermarked/`. Skipped rows never shift that mapping.
+- Rows without a PicPeak event ID are skipped, and a gallery with no local photos is left untouched rather than emptied.
+- A gallery is cleared only after its replacement photos have been found on disk. If the existing remote photos cannot be listed, the upload for that gallery is reported as an error instead of duplicating photos.
+
+### Credentials And Transport
+
+Credentials are sent to `app.schulfotos.base-url` (CSV upload) and `app.picpeak.api-url` (PicPeak login). Both are refused over plain `http://` unless the host is loopback or a private network address, so a mistyped URL cannot leak the gallery password over the internet. Use `https://` for anything reachable from outside your network.
 
 ## Configuration
 
@@ -202,7 +215,7 @@ All properties use the `app.schulfotos` prefix.
 | `base-url` | `https://example.com/schulfotos` | Base URL for gallery pages |
 | `gallery-url` | `https://example.com/schulfotos/?code=` | URL template for gallery codes |
 | `default-code-count` | `17` | Default number of gallery codes to generate |
-| `code-charset` | `A–Z0–9` | Character set for code generation |
+| `code-charset` | `ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789` | Alphabet for the two random code groups. Upper-cased and deduplicated; must contain only `A-Z0-9` and at least 2 distinct characters |
 | `qr-size` | `200` | QR code image size in pixels |
 | `grid-columns` | `3` | Number of columns on the PDF card grid |
 | `grid-rows` | `4` | Number of rows on the PDF card grid |
@@ -213,7 +226,7 @@ All properties use the `app.schulfotos` prefix.
 | `klassenfoto-folder` | `klassenfoto` | Folder name for class photos |
 | `portrait-prefix` | `portrait-` | Prefix for portrait folders (`portrait-1`, `portrait-2`, …) |
 | `watermarked-suffix` | `-watermarked` | Suffix appended to output folder names |
-| `password-length` | `9` | Generated password length |
+| `password-length` | `9` | Generated password length (minimum 4, one upper-case, lower-case, digit and special character are always included) |
 
 ### PicPeak Properties
 
@@ -234,7 +247,7 @@ All properties use the `app.picpeak` prefix.
 | `admin-email` | _(blank)_ |
 | `require-password` | `true` |
 | `welcome-message` | _(blank)_ |
-| `expiration-days` | `42` |
+| `expiration-days` | `180` |
 | `allow-user-uploads` | `false` |
 | `feedback-enabled` | `true` |
 | `allow-ratings` | `true` |
@@ -260,8 +273,8 @@ All properties use the `app.picpeak` prefix.
 | `hero-logo-size` | `medium` |
 | `hero-logo-position` | `top` |
 | `upload-category-id` | _(unset)_ |
-| `klassenfoto-category-id` | _(unset)_ |
-| `portrait-category-id` | _(unset)_ |
+| `klassenfoto-category-id` | `2` |
+| `portrait-category-id` | `3` |
 | `external-path` | _(unset)_ |
 | `hero-photo-id` | _(unset)_ |
 | `max-password-retries` | `3` |
