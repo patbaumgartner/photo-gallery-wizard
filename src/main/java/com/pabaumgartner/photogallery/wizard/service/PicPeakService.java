@@ -291,7 +291,7 @@ public class PicPeakService {
 			else {
 				builder.POST(HttpRequest.BodyPublishers.noBody());
 			}
-			HttpResponse<String> response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+			HttpResponse<String> response = HttpEndpoints.send(httpClient, builder.build());
 			return response.statusCode() >= 200 && response.statusCode() < 300;
 		}
 		catch (Exception ex) {
@@ -311,7 +311,7 @@ public class PicPeakService {
 				.header("Cookie", "admin_token=" + token)
 				.GET()
 				.build();
-			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+			HttpResponse<String> response = HttpEndpoints.send(httpClient, request);
 			if (response.statusCode() < 200 || response.statusCode() >= 300) {
 				LOGGER.debug("List photos failed for event {} with status {}", eventId, response.statusCode());
 				return Optional.empty();
@@ -380,7 +380,7 @@ public class PicPeakService {
 				.header("Cookie", "admin_token=" + token)
 				.DELETE()
 				.build();
-			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+			HttpResponse<String> response = HttpEndpoints.send(httpClient, request);
 			return response.statusCode() >= 200 && response.statusCode() < 300;
 		}
 		catch (Exception ex) {
@@ -413,7 +413,7 @@ public class PicPeakService {
 				.POST(HttpRequest.BodyPublishers.ofString(requestBody))
 				.build();
 
-			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+			HttpResponse<String> response = HttpEndpoints.send(httpClient, request);
 
 			if (response.statusCode() != 200) {
 				LOGGER.error("PicPeak login failed with status {}", response.statusCode());
@@ -524,7 +524,7 @@ public class PicPeakService {
 				.POST(HttpRequest.BodyPublishers.ofString(requestBody))
 				.build();
 
-			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+			HttpResponse<String> response = HttpEndpoints.send(httpClient, request);
 
 			if (response.statusCode() != 200 && response.statusCode() != 201) {
 				LOGGER.error("PicPeak event creation failed with status {}: {}", response.statusCode(),
@@ -590,7 +590,7 @@ public class PicPeakService {
 				.POST(HttpRequest.BodyPublishers.concat(parts.toArray(new HttpRequest.BodyPublisher[0])))
 				.build();
 
-			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+			HttpResponse<String> response = HttpEndpoints.send(httpClient, request);
 
 			if (response.statusCode() >= 200 && response.statusCode() < 300) {
 				LOGGER.info("Uploaded {} photos to PicPeak event {}", photos.size(), eventId);

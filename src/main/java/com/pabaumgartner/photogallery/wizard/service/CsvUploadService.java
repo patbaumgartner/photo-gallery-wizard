@@ -69,7 +69,7 @@ public class CsvUploadService {
 			.build();
 
 		try {
-			HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+			HttpResponse<String> response = HttpEndpoints.send(httpClient, request);
 
 			if (response.statusCode() >= 200 && response.statusCode() < 300) {
 				LOGGER.atInfo().addArgument(uploadUri).log("CSV uploaded successfully to {}");
