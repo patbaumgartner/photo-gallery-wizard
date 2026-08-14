@@ -93,7 +93,11 @@ final class PhotoGalleryWizardResultsStepView {
 					.rounded()
 					.padding(1)
 					.bg(SURFACE)
-					.borderColor(ERROR_GLOW)))
+					.borderColor(ERROR_GLOW),
+				text(" ").length(1),
+				text("Vollständige Meldung inklusive Ursache: logs/photo-gallery-wizard.log")
+					.fg(readableText(TEXT_MUTED, SURFACE_ALT))
+					.length(1)))
 			.rounded()
 			.padding(1)
 			.bg(SURFACE_ALT)
