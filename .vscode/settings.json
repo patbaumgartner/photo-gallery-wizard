@@ -11,5 +11,19 @@
     // <argLine> from its value and break the test run.
     "[xml]": {
         "editor.formatOnSave": false
+    },
+    // Formatting JSON on save strips comments from this file and rewrites the
+    // agent hook configs under .github/hooks/.
+    "[json]": {
+        "editor.formatOnSave": false
+    },
+    "[jsonc]": {
+        "editor.formatOnSave": false
+    },
+    "[html]": {
+        "editor.formatOnSave": false
+    },
+    "[svg]": {
+        "editor.formatOnSave": false
     }
 }
