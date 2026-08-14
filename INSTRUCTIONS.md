@@ -49,6 +49,16 @@ java -jar target/photo-gallery-wizard-*.jar
 ./photo-gallery-wizard
 ```
 
+### When something goes wrong
+
+The TUI owns the terminal, so nothing is printed to the console while the wizard runs. Every step writes to `logs/photo-gallery-wizard.log` in the working directory instead, rotated daily and kept for seven days. The wizard itself only shows a shortened message; the log has the full one, including HTTP status codes and stack traces.
+
+For more detail, start the application with:
+
+```bash
+java -jar photo-gallery-wizard-*.jar --logging.level.com.pabaumgartner.photogallery=DEBUG
+```
+
 ---
 
 ## Configuration
