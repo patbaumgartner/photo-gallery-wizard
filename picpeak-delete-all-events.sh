@@ -38,6 +38,36 @@ read_prop() {
   grep -E "^${key}=" "$PROPS_FILE" 2>/dev/null | head -1 | cut -d'=' -f2- | tr -d '\r'
 }
 
+# Pulls the first value of a JSON string field. BSD grep has no -P/\K, so the
+# match is trimmed with sed instead.
+json_string() {
+  grep -Eo "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]+" | head -1 | sed -E 's/.*"//'
+}
+
+# Pulls every value of a JSON integer field, one per line.
+json_numbers() {
+  grep -Eo "\"$1\"[[:space:]]*:[[:space:]]*[0-9]+" | grep -Eo '[0-9]+$'
+}
+
+# Mirrors HttpEndpoints.requireCredentialSafeTransport: the admin password must
+# not leave the machine in clear text unless the target is on the local network.
+require_safe_transport() {
+  local url="$1"
+  case "$url" in
+    https://*) return 0 ;;
+  esac
+  local host="${url#*://}"
+  host="${host%%/*}"
+  host="${host%%:*}"
+  case "$host" in
+    localhost | *.localhost | *.local | 127.* | 10.* | 192.168.* | ::1 | '[::1]') return 0 ;;
+    172.1[6-9].* | 172.2[0-9].* | 172.3[01].*) return 0 ;;
+  esac
+  echo "ERROR: Refusing to send credentials to $url in clear text;" >&2
+  echo "       use https, or a loopback or private network address." >&2
+  exit 1
+}
+
 # Verify configuration/picpeak-credentials.properties exists
 if [[ ! -f "$PROPS_FILE" ]]; then
   echo "ERROR: $PROPS_FILE not found." >&2
@@ -56,6 +86,8 @@ fi
 # Strip trailing slash
 API_URL="${API_URL%/}"
 
+require_safe_transport "$API_URL"
+
 echo "PicPeak instance: $API_URL"
 echo ""
 
@@ -73,7 +105,7 @@ LOGIN_BODY=$(curl -s -c "$COOKIE_JAR" \
 # Try cookie jar first, then fall back to JSON body
 ADMIN_TOKEN=$(grep 'admin_token' "$COOKIE_JAR" 2>/dev/null | awk '{print $NF}' || true)
 if [[ -z "$ADMIN_TOKEN" ]]; then
-  ADMIN_TOKEN=$(echo "$LOGIN_BODY" | grep -oP '"token"\s*:\s*"\K[^"]+' || true)
+  ADMIN_TOKEN=$(echo "$LOGIN_BODY" | json_string token || true)
 fi
 
 if [[ -z "$ADMIN_TOKEN" ]]; then
@@ -97,7 +129,7 @@ while true; do
     -H "Accept: application/json" \
     -b "admin_token=${ADMIN_TOKEN}")
 
-  PAGE_IDS=$(echo "$PAGE_JSON" | grep -oP '"id"\s*:\s*\K[0-9]+' || true)
+  PAGE_IDS=$(echo "$PAGE_JSON" | json_numbers id || true)
   PAGE_COUNT=$(echo "$PAGE_IDS" | grep -c '[0-9]' || true)
 
   if [[ "$PAGE_COUNT" -eq 0 ]]; then
