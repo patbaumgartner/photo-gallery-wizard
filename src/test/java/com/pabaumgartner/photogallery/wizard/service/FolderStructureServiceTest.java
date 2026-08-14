@@ -218,6 +218,19 @@ class FolderStructureServiceTest {
 	}
 
 	@Test
+	void safeSegmentDoesNotCapLengthInTheMiddleOfASurrogatePair() throws IOException {
+		// The emoji straddles the 100-character cap; keeping half of it would make a
+		// name the file system rejects.
+		String name = "x".repeat(99) + "\uD83D\uDE00" + "tail";
+
+		String segment = FolderStructureService.safeSegment(name, "fallback");
+
+		assertThat(segment).hasSize(99).doesNotContain("\uD83D");
+		Path created = Files.createDirectory(tempDir.resolve(segment));
+		assertThat(created).isDirectory();
+	}
+
+	@Test
 	void createFolderStructureRefusesEventNamesThatEscapeTheOutputDirectory() throws IOException {
 		Path outputDir = tempDir.resolve("schulfotos");
 		Files.createDirectories(outputDir);

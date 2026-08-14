@@ -44,7 +44,11 @@ public class FolderStructureService {
 		String candidate = value == null ? "" : Normalizer.normalize(value.trim(), Normalizer.Form.NFC);
 		candidate = UNSAFE_CHARACTERS.matcher(candidate).replaceAll("-").strip();
 		if (candidate.length() > MAX_SEGMENT_LENGTH) {
-			candidate = candidate.substring(0, MAX_SEGMENT_LENGTH);
+			// Cutting between the two halves of a surrogate pair would leave an
+			// unpaired char that no file system accepts.
+			int end = Character.isHighSurrogate(candidate.charAt(MAX_SEGMENT_LENGTH - 1)) ? MAX_SEGMENT_LENGTH - 1
+					: MAX_SEGMENT_LENGTH;
+			candidate = candidate.substring(0, end);
 		}
 		// Trailing dots and spaces are silently dropped by Windows, and stripping them
 		// also turns "." and ".." into the fallback instead of a directory traversal.
