@@ -43,7 +43,7 @@ class PicPeakPropertiesTest {
 		assertThat(props.customerEmail()).isEmpty();
 		assertThat(props.adminEmail()).isEmpty();
 		assertThat(props.welcomeMessage()).isEmpty();
-		assertThat(props.expirationDays()).isEqualTo(30);
+		assertThat(props.expirationDays()).isEqualTo(180);
 		assertThat(props.headerStyle()).isEqualTo("standard");
 		assertThat(props.heroDividerStyle()).isEqualTo("wave");
 		assertThat(props.cssTemplateId()).isEqualTo(1);
@@ -83,9 +83,9 @@ class PicPeakPropertiesTest {
 	}
 
 	@Test
-	void negativeExpirationDaysDefaultsTo30() {
+	void negativeExpirationDaysDefaultsTo180() {
 		PicPeakProperties props = withValues(-5, 1);
-		assertThat(props.expirationDays()).isEqualTo(30);
+		assertThat(props.expirationDays()).isEqualTo(180);
 	}
 
 	@Test

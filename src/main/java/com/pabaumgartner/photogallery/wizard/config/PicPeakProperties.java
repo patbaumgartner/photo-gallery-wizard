@@ -54,7 +54,7 @@ public record PicPeakProperties(boolean enabled, boolean createEvents, String ap
 			welcomeMessage = "";
 		}
 		if (expirationDays <= 0) {
-			expirationDays = 30;
+			expirationDays = 180;
 		}
 		if (headerStyle == null) {
 			headerStyle = "standard";

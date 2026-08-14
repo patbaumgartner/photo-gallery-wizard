@@ -43,27 +43,27 @@ class ImagePropertiesTest {
 	}
 
 	@Test
-	void zeroWatermarkOpacityDefaultsTo03() {
+	void zeroWatermarkOpacityDefaultsTo05() {
 		ImageProperties props = new ImageProperties(null, 0, 0f, 0f, 0f, 0, 0, null);
-		assertThat(props.watermarkOpacity()).isEqualTo(0.3f);
-	}
-
-	@Test
-	void customWatermarkOpacityPreserved() {
-		ImageProperties props = new ImageProperties(null, 0, 0.5f, 0f, 0f, 0, 0, null);
 		assertThat(props.watermarkOpacity()).isEqualTo(0.5f);
 	}
 
 	@Test
-	void zeroWatermarkScaleDefaultsTo04() {
+	void customWatermarkOpacityPreserved() {
+		ImageProperties props = new ImageProperties(null, 0, 0.25f, 0f, 0f, 0, 0, null);
+		assertThat(props.watermarkOpacity()).isEqualTo(0.25f);
+	}
+
+	@Test
+	void zeroWatermarkScaleDefaultsTo06() {
 		ImageProperties props = new ImageProperties(null, 0, 0f, 0f, 0f, 0, 0, null);
-		assertThat(props.watermarkScale()).isEqualTo(0.4f);
+		assertThat(props.watermarkScale()).isEqualTo(0.6f);
 	}
 
 	@Test
 	void customWatermarkScalePreserved() {
-		ImageProperties props = new ImageProperties(null, 0, 0f, 0.6f, 0f, 0, 0, null);
-		assertThat(props.watermarkScale()).isEqualTo(0.6f);
+		ImageProperties props = new ImageProperties(null, 0, 0f, 0.35f, 0f, 0, 0, null);
+		assertThat(props.watermarkScale()).isEqualTo(0.35f);
 	}
 
 	@Test

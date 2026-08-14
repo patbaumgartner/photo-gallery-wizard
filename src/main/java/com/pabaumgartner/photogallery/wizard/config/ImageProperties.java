@@ -14,10 +14,10 @@ public record ImageProperties(String watermarkPath, int resizeMaxEdge, float wat
 			resizeMaxEdge = 1200;
 		}
 		if (watermarkOpacity <= 0f || watermarkOpacity > 1f) {
-			watermarkOpacity = 0.3f;
+			watermarkOpacity = 0.5f;
 		}
 		if (watermarkScale <= 0f || watermarkScale > 1f) {
-			watermarkScale = 0.4f;
+			watermarkScale = 0.6f;
 		}
 		if (jpegQuality <= 0f || jpegQuality > 1f) {
 			jpegQuality = 0.9f;
