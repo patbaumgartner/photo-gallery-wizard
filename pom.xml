@@ -120,9 +120,22 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>resolve-dependency-paths</id>
+            <goals>
+              <goal>properties</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <argLine>@{argLine} --add-opens java.base/java.lang=ALL-UNNAMED
+          <!-- Loading the Mockito agent up front; self-attaching stops working on newer JDKs. -->
+          <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.lang.reflect=ALL-UNNAMED</argLine>
         </configuration>
       </plugin>
