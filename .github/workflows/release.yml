@@ -209,6 +209,9 @@ jobs:
           for dir in release-jar release-linux release-macos release-windows; do
             platform="${dir#release-}"
             archive="photo-gallery-wizard-${VERSION}-${platform}.zip"
+            # Artifact upload/download drops the executable bit, so restore it
+            # before zipping; otherwise the shipped binary cannot be started.
+            chmod +x "$dir/photo-gallery-wizard" "$dir/run.sh" 2>/dev/null || true
             cd "$dir"
             zip -r "../${archive}" .
             cd ..
