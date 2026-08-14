@@ -87,6 +87,8 @@ public class PdfGeneratorService {
 
 	private static final String RESOURCES_PREFIX = "src/main/resources/";
 
+	private static final String UNSUPPORTED_CHARACTER_REPLACEMENT = "?";
+
 	private static final float INK = 0.0f;
 
 	private static final float LINE_GRAY = 0.75f;
@@ -190,9 +192,9 @@ public class PdfGeneratorService {
 			content.drawImage(qrImage, innerX + (innerWidth - qrSize) / 2,
 					innerY + TEXT_HEIGHT - QR_VERTICAL_OFFSET_MM * MM_TO_PT, qrSize, qrSize);
 
-			String codeLabel = code.code();
-			String galleryCodeLabel = options.galleryCodeLabel();
-			String eventName = options.eventName();
+			String codeLabel = toEncodable(fontBold, code.code());
+			String galleryCodeLabel = toEncodable(fontRegular, options.galleryCodeLabel());
+			String eventName = toEncodable(fontRegular, options.eventName());
 			boolean hasEventName = !eventName.isBlank();
 
 			float actualCodeFontSize = fitFontSize(fontBold, codeLabel, innerWidth - FIT_FONT_MARGIN, CODE_FONT_SIZE,
@@ -232,7 +234,7 @@ public class PdfGeneratorService {
 			float innerHeight, PDType1Font fontBold, PDType1Font fontRegular, PDImageXObject logoImage,
 			PdfOptions options) throws IOException {
 
-		String baseUrl = options.baseUrl();
+		String baseUrl = toEncodable(fontBold, options.baseUrl());
 		cs.saveGraphicsState();
 		try {
 
@@ -271,31 +273,17 @@ public class PdfGeneratorService {
 					+ (baseUrl.isBlank() ? 0f : BACK_URL_FONT_SIZE + BACK_RULE_GAP);
 			float passwordSectionBotY = bottomRuleY + BACK_RULE_GAP;
 
-			String password = code.password().isBlank() ? "\u2014" : code.password();
+			String password = code.password().isBlank() ? "\u2014" : toEncodable(fontBold, code.password());
 			float actualPwFontSize = fitFontSize(fontBold, password, innerWidth - FIT_FONT_MARGIN,
 					BACK_PASSWORD_FONT_SIZE, MIN_FONT_SIZE);
 			float blockH = BACK_LABEL_FONT_SIZE + BACK_LABEL_PW_GAP + actualPwFontSize;
 			float blockBotY = passwordSectionBotY + ((rule1Y - BACK_RULE_GAP - passwordSectionBotY) - blockH) / 2f;
 
-			String label = options.galleryPasswordLabel();
-			float labelW = fontRegular.getStringWidth(label) / 1000f * BACK_LABEL_FONT_SIZE;
-			float labelX = innerX + (innerWidth - labelW) / 2f;
-			float labelY = blockBotY + actualPwFontSize + BACK_LABEL_PW_GAP;
-			cs.beginText();
 			cs.setNonStrokingColor(INK, INK, INK);
-			cs.setFont(fontRegular, BACK_LABEL_FONT_SIZE);
-			cs.newLineAtOffset(labelX, labelY);
-			cs.showText(label);
-			cs.endText();
-
-			float pwW = fontBold.getStringWidth(password) / 1000f * actualPwFontSize;
-			float pwX = innerX + (innerWidth - pwW) / 2f;
-			cs.beginText();
-			cs.setNonStrokingColor(INK, INK, INK);
-			cs.setFont(fontBold, actualPwFontSize);
-			cs.newLineAtOffset(pwX, blockBotY);
-			cs.showText(password);
-			cs.endText();
+			String label = toEncodable(fontRegular, options.galleryPasswordLabel());
+			drawCenteredText(cs, fontRegular, BACK_LABEL_FONT_SIZE, label, innerX, innerWidth,
+					blockBotY + actualPwFontSize + BACK_LABEL_PW_GAP);
+			drawCenteredText(cs, fontBold, actualPwFontSize, password, innerX, innerWidth, blockBotY);
 
 			cs.setStrokingColor(LINE_GRAY, LINE_GRAY, LINE_GRAY);
 			cs.setLineWidth(BACK_RULE_WIDTH);
@@ -305,15 +293,9 @@ public class PdfGeneratorService {
 
 			if (!baseUrl.isBlank()) {
 				String displayUrl = truncateUrl(baseUrl, fontBold, BACK_URL_FONT_SIZE, innerWidth - FIT_FONT_MARGIN);
-				float urlW = fontBold.getStringWidth(displayUrl) / 1000f * BACK_URL_FONT_SIZE;
-				float urlX = innerX + (innerWidth - urlW) / 2f;
 				float urlY = innerY + (bottomRuleY - innerY - BACK_URL_FONT_SIZE) / 2f + MM_TO_PT;
-				cs.beginText();
 				cs.setNonStrokingColor(INK, INK, INK);
-				cs.setFont(fontBold, BACK_URL_FONT_SIZE);
-				cs.newLineAtOffset(urlX, urlY);
-				cs.showText(displayUrl);
-				cs.endText();
+				drawCenteredText(cs, fontBold, BACK_URL_FONT_SIZE, displayUrl, innerX, innerWidth, urlY);
 			}
 		}
 		finally {
@@ -352,6 +334,37 @@ public class PdfGeneratorService {
 			size -= 0.5f;
 		}
 		return size;
+	}
+
+	/**
+	 * The Standard 14 fonts only cover WinAnsiEncoding, and PDFBox rejects anything else.
+	 * A class name typed into the wizard must never abort the whole PDF, so unsupported
+	 * characters are replaced instead.
+	 */
+	static String toEncodable(PDType1Font font, String text) {
+		if (isEncodable(font, text)) {
+			return text;
+		}
+		StringBuilder encodable = new StringBuilder(text.length());
+		int index = 0;
+		while (index < text.length()) {
+			int codePoint = text.codePointAt(index);
+			String character = new String(Character.toChars(codePoint));
+			encodable.append(isEncodable(font, character) ? character : UNSUPPORTED_CHARACTER_REPLACEMENT);
+			index += Character.charCount(codePoint);
+		}
+		return encodable.toString();
+	}
+
+	private static boolean isEncodable(PDType1Font font, String text) {
+		try {
+			font.getStringWidth(text);
+			return true;
+		}
+		catch (IOException | IllegalArgumentException ex) {
+			LOGGER.debug("Text is not representable in the PDF font: {}", ex.getMessage());
+			return false;
+		}
 	}
 
 	private PDImageXObject loadLogoImage(PDDocument document, String logoUrl) {

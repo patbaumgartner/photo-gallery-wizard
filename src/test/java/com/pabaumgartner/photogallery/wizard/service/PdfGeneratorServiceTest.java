@@ -16,6 +16,8 @@ import org.apache.pdfbox.cos.COSName;
 import org.apache.pdfbox.cos.COSStream;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -264,6 +266,32 @@ class PdfGeneratorServiceTest {
 
 		long fileSize = Files.size(output);
 		assertThat(fileSize).isGreaterThan(1000);
+	}
+
+	@Test
+	void charactersOutsideTheFontEncodingDoNotAbortThePdf() throws IOException {
+		Path output = tempDir.resolve("unicode.pdf");
+		List<GalleryCode> codes = List.of(new GalleryCode("ABCD-1234-WXYZ", "Pw9!kLm2x"));
+		PdfOptions options = new PdfOptions(output, 3, 4, true, "Klasse 3ä Ćwiczenia \uD83D\uDE00",
+				"https://gallery.example.com", "", "GALERIE CODE", "GALERIE PASSWORT");
+
+		pdfService.createPdf(codes, generateQrImages(codes), options);
+
+		try (PDDocument doc = Loader.loadPDF(output.toFile())) {
+			PDFTextStripper stripper = new PDFTextStripper();
+			stripper.setStartPage(1);
+			stripper.setEndPage(1);
+			assertThat(stripper.getText(doc)).contains("Klasse 3ä ?wiczenia ?");
+		}
+	}
+
+	@Test
+	void toEncodableKeepsSupportedCharactersAndReplacesTheRest() {
+		PDType1Font font = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+
+		assertThat(PdfGeneratorService.toEncodable(font, "Klasse 3ä – ok")).isEqualTo("Klasse 3ä – ok");
+		assertThat(PdfGeneratorService.toEncodable(font, "Ćwiczenia")).isEqualTo("?wiczenia");
+		assertThat(PdfGeneratorService.toEncodable(font, "a\uD83D\uDE00b")).isEqualTo("a?b");
 	}
 
 }
