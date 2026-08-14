@@ -35,7 +35,9 @@ final class HttpEndpoints {
 
 	private static final int MAX_LOGGED_BODY_LENGTH = 200;
 
-	private static final Set<String> BODY_HEADERS = Set.of("content-type", "content-length");
+	private static final Set<String> CONTENT_HEADERS = Set.of("content-type", "content-length");
+
+	private static final Set<Integer> REDIRECT_STATUSES = Set.of(301, 302, 303, 307, 308);
 
 	private HttpEndpoints() {
 	}
@@ -67,13 +69,13 @@ final class HttpEndpoints {
 		throw new IOException("Gave up after " + MAX_REDIRECTS + " redirects starting at " + request.uri());
 	}
 
-	static HttpResponse.BodyHandler<String> boundedString() {
+	private static HttpResponse.BodyHandler<String> boundedString() {
 		return responseInfo -> new BoundedStringSubscriber();
 	}
 
 	private static HttpRequest redirect(HttpRequest request, HttpResponse<String> response) throws IOException {
 		int status = response.statusCode();
-		if (status < 300 || status > 308 || status == 304 || status == 305 || status == 306) {
+		if (!REDIRECT_STATUSES.contains(status)) {
 			return null;
 		}
 		String location = response.headers().firstValue("Location").orElse("");
@@ -88,7 +90,8 @@ final class HttpEndpoints {
 		// bodyless GET, which is what the JDK's own redirect handling does.
 		boolean replayBody = status == 307 || status == 308;
 		HttpRequest.Builder builder = HttpRequest
-			.newBuilder(request, (name, value) -> replayBody || !BODY_HEADERS.contains(name.toLowerCase(Locale.ROOT)))
+			.newBuilder(request,
+					(name, value) -> replayBody || !CONTENT_HEADERS.contains(name.toLowerCase(Locale.ROOT)))
 			.uri(target);
 		if (replayBody) {
 			builder.method(request.method(), request.bodyPublisher().orElseGet(HttpRequest.BodyPublishers::noBody));
