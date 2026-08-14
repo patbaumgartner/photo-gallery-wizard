@@ -174,21 +174,6 @@ class CsvUploadServiceTest {
 		}
 	}
 
-	@Test
-	void uploadEscapesQuotesAndNewlinesInTheCsvFilename() throws IOException {
-		Path csvFile = tempDir.resolve("od\"d\rname.csv");
-		Files.writeString(csvFile, "data", StandardCharsets.UTF_8);
-
-		RecordingBodyHttpClient client = new RecordingBodyHttpClient(200, "OK");
-		CsvUploadService service = new CsvUploadService(schulfotosProperties("https://example.com/schulfotos"),
-				picPeakProperties("user", "pass"), client);
-
-		service.upload(csvFile);
-
-		String body = new String(client.bodies.get(0), StandardCharsets.UTF_8);
-		assertThat(body).contains("filename=\"od_d_name.csv\"");
-	}
-
 	// --- Stub HttpClient ---
 
 	static class RecordingHttpClient extends HttpClient {

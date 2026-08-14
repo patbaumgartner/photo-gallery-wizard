@@ -32,9 +32,16 @@ jobs:
         run: ./mvnw -B -ntp spring-javaformat:validate
 
   build:
-    name: Build & Test
+    # The wizard builds directory names from CSV data and swaps watermark output
+    # directories on disk, so path handling has to be verified on Windows and
+    # macOS as well, not only on the Linux runner.
+    name: Build & Test (${{ matrix.os }})
     needs: format-check
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ ubuntu-latest, macos-latest, windows-latest ]
     permissions:
       contents: read
 
@@ -50,11 +57,21 @@ jobs:
           cache: maven
 
       - name: Build and run tests with coverage
+        shell: bash
         run: ./mvnw -B -ntp verify
 
       - name: Upload JaCoCo coverage report
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-report
           path: target/site/jacoco/
           if-no-files-found: warn
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: surefire-reports-${{ matrix.os }}
+          path: target/surefire-reports/
+          if-no-files-found: ignore
