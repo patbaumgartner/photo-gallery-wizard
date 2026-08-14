@@ -1,4 +1,14 @@
+# Normalise every text file to LF in the repository, whatever the contributor's
+# platform does in the working tree.
+* text=auto eol=lf
+
 /mvnw text eol=lf
 *.sh text eol=lf
 *.cmd text eol=crlf
 *.bat text eol=crlf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary
+*.jar binary
