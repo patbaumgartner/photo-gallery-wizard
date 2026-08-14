@@ -23,7 +23,10 @@ This project follows a [Code of Conduct](CODE_OF_CONDUCT.md). By participating, 
    - A clear title and description
    - Steps to reproduce the problem
    - Expected vs. actual behaviour
+   - The relevant part of `logs/photo-gallery-wizard.log`, with passwords and share links removed
    - Java version, OS, and whether you use the JAR or native binary
+
+Found a security problem instead? Do not open an issue — follow [SECURITY.md](SECURITY.md).
 
 ## How to Suggest a Feature
 

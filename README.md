@@ -328,6 +328,10 @@ The build also runs JaCoCo code coverage and Taikai architecture verification.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Security
+
+See [SECURITY.md](SECURITY.md) for how to report a vulnerability privately.
+
 ## Code of Conduct
 
 See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
