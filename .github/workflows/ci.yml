@@ -8,7 +8,9 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded pull-request runs are worth cancelling; pushes to main are not,
+  # because then a commit could land without ever having been verified.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   format-check:
