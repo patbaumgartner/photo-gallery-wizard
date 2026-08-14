@@ -154,6 +154,20 @@ public class PhotoGalleryWizardTui {
 		return controller.handleKeyEvent(keyCode, controllerActions());
 	}
 
+	// Seams for tests: fill in the form, press a key, inspect what would be rendered.
+
+	FormState formState() {
+		return form;
+	}
+
+	EventResult pressKey(KeyCode keyCode) {
+		return handleKeyEvent(keyCode);
+	}
+
+	PhotoGalleryWizardViewModel viewModel() {
+		return buildViewModel();
+	}
+
 	private int currentTerminalHeight() {
 		if (runner == null || runner.tuiRunner() == null || runner.tuiRunner().terminal() == null
 				|| runner.tuiRunner().terminal().size() == null) {
@@ -619,7 +633,7 @@ public class PhotoGalleryWizardTui {
 	}
 
 	private String sanitizedEventCode() {
-		return sanitizeFileNameSegment(form.textValue("schoolEventCode"), "code");
+		return sanitizeFileNameSegment(normalizeEventCode(form.textValue("schoolEventCode")), "code");
 	}
 
 	private void preselectCsvFile() {

@@ -125,6 +125,18 @@ class TuiPaletteTest {
 	}
 
 	@Test
+	void mutedTextMeetsWcagAaOnBothPanelBackgrounds() {
+		assertThat(TuiPalette.contrastRatio("#A9B7D0", "#0B1020")).isGreaterThanOrEqualTo(4.5d);
+		assertThat(TuiPalette.contrastRatio("#A9B7D0", "#111933")).isGreaterThanOrEqualTo(4.5d);
+	}
+
+	@Test
+	void badgeTextMeetsWcagAaOnBrightAccentBackgrounds() {
+		assertThat(TuiPalette.contrastRatio("#050816", "#00F5FF")).isGreaterThanOrEqualTo(4.5d);
+		assertThat(TuiPalette.contrastRatio("#050816", "#FF4FD8")).isGreaterThanOrEqualTo(4.5d);
+	}
+
+	@Test
 	void contrastRatioPureMidGray() {
 		double ratio = TuiPalette.contrastRatio("#808080", "#000000");
 		assertThat(ratio).isGreaterThan(1.0d);
