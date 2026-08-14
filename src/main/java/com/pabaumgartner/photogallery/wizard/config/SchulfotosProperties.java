@@ -20,7 +20,10 @@ public record SchulfotosProperties(String baseUrl, String galleryUrl, int defaul
 	private static final int MIN_PASSWORD_LENGTH = 4;
 
 	public SchulfotosProperties {
-		if (baseUrl == null || baseUrl.isBlank()) {
+		// Endpoints are built as baseUrl + "/upload.php", so a trailing slash would
+		// produce a double slash and a 404.
+		baseUrl = baseUrl == null ? "" : baseUrl.strip().replaceAll("/+$", "");
+		if (baseUrl.isBlank()) {
 			baseUrl = "https://example.com/schulfotos";
 		}
 		if (galleryUrl == null || galleryUrl.isBlank()) {

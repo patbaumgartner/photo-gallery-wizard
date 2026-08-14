@@ -45,6 +45,20 @@ class SchulfotosPropertiesTest {
 	}
 
 	@Test
+	void trailingSlashesAreStrippedFromTheBaseUrl() {
+		SchulfotosProperties props = new SchulfotosProperties(" https://custom.ch/schulfotos// ", null, 0, 0, 0, 0,
+				false, null, null, null, null, null, null, null, null, 0);
+		assertThat(props.baseUrl()).isEqualTo("https://custom.ch/schulfotos");
+	}
+
+	@Test
+	void aBaseUrlOfOnlySlashesFallsBackToTheDefault() {
+		SchulfotosProperties props = new SchulfotosProperties("///", null, 0, 0, 0, 0, false, null, null, null, null,
+				null, null, null, null, 0);
+		assertThat(props.baseUrl()).isEqualTo("https://example.com/schulfotos");
+	}
+
+	@Test
 	void customValuesPreserved() {
 		SchulfotosProperties props = new SchulfotosProperties("https://custom.ch", "https://custom.ch/?code=", 20, 300,
 				4, 5, true, "CODE", "PW", "output", "ABC", "logo.png", "groupphoto", "individual-", "-wm", 12);
