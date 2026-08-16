@@ -32,7 +32,7 @@ class PhotoGalleryWizardStepViewTest {
 				0.5d, "Stage", inProgress, 0.5d, "Stage", executionResult, csvFiles, 0, List.of(Path.of("created")),
 				"Klasse 3a-ABCD", folderCodes, eventFolders, 0, watermarkResult, uploadResult, "Upload-Hinweis",
 				REQUEST, "https://base", "https://gallery/?code=", Path.of("codes.csv"), Path.of("codes.pdf"), 200, 3,
-				4, PhotoGalleryWizardStep.values().length, "wm.png", 1200, 0.9f, "-watermarked");
+				4, PhotoGalleryWizardStep.values().length, "wm.png", 1200);
 	}
 
 	private static PhotoGalleryWizardViewModel empty(PhotoGalleryWizardStep step) {
