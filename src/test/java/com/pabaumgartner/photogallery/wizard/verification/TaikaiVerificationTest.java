@@ -6,6 +6,7 @@ import static com.tngtech.archunit.core.domain.JavaModifier.STATIC;
 
 import java.util.List;
 
+import com.enofex.taikai.ClassCriteria;
 import com.enofex.taikai.Taikai;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -33,7 +34,7 @@ class TaikaiVerificationTest {
 					List.of(PRIVATE, STATIC, FINAL)))
 			.test(test -> test.junit(junit -> junit.classesShouldNotBeAnnotatedWithDisabled()
 				.methodsShouldNotBeAnnotatedWithDisabled()
-				.classesShouldBePackagePrivate(".*Tests?")
+				.classesShouldBePackagePrivate(ClassCriteria.nameMatching(".*Tests?"))
 				.methodsShouldBePackagePrivate()
 				.methodsShouldContainAssertionsOrVerifications()))
 			.spring(spring -> spring.noAutowiredFields()
