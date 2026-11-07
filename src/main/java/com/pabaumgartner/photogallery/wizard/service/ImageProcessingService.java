@@ -135,7 +135,7 @@ public class ImageProcessingService {
 				Path outputFile = outputDir.resolve(outputName);
 				writeJpeg(result, outputFile);
 				count++;
-				listener.onImageDone(alreadyProcessed + count, imageFile.getFileName().toString());
+				listener.onImageDone(alreadyProcessed + count);
 			}
 		}
 		return count;
@@ -301,7 +301,7 @@ public class ImageProcessingService {
 	@FunctionalInterface
 	private interface ProgressImageListener {
 
-		void onImageDone(int done, String file);
+		void onImageDone(int done);
 
 	}
 

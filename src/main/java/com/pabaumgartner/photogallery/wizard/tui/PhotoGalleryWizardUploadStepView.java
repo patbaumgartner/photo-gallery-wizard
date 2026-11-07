@@ -45,7 +45,7 @@ final class PhotoGalleryWizardUploadStepView {
 		}
 
 		return panel("PicPeak Hochladen",
-				column(uploadIntro(viewModel), eventFolderList(viewModel, accent), selectedEventSummary(viewModel),
+				column(uploadIntro(), eventFolderList(viewModel, accent), selectedEventSummary(viewModel),
 						uploadSummary(viewModel), uploadPlan(viewModel)))
 			.rounded()
 			.padding(1)
@@ -54,7 +54,7 @@ final class PhotoGalleryWizardUploadStepView {
 			.fill();
 	}
 
-	private static Element uploadIntro(PhotoGalleryWizardViewModel viewModel) {
+	private static Element uploadIntro() {
 		return column(text(
 				"Fotos mit Wasserzeichen in PicPeak-Galerien hochladen. Jede Galerie erhält ihre Portraitfotos plus alle Klassenfotos.")
 			.fg(readableText(TEXT_MUTED, SURFACE_ALT))
