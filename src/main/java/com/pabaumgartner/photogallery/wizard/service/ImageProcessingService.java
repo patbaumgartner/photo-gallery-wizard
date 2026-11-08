@@ -77,7 +77,7 @@ public class ImageProcessingService {
 		Path klassenfotoDir = eventDir.resolve(klassenfotoFolder);
 		if (Files.isDirectory(klassenfotoDir)) {
 			Path outputDir = eventDir.resolve(klassenfotoFolder + "s" + watermarkedSuffix);
-			int count = resizeAndWatermarkFolder(klassenfotoDir, outputDir, watermark, maxEdge, (done, file) -> {
+			int count = resizeAndWatermarkFolder(klassenfotoDir, outputDir, watermark, maxEdge, done -> {
 				double ratio = (double) done / totalImages;
 				progressListener.accept(new ProcessingProgress(0.10d + 0.85d * ratio, "Bilder werden verarbeitet"));
 			}, processedSoFar);
@@ -94,7 +94,7 @@ public class ImageProcessingService {
 				String name = sub.getFileName().toString();
 				if (name.startsWith(portraitPrefix) && !name.endsWith(watermarkedSuffix)) {
 					Path outputDir = eventDir.resolve(name + watermarkedSuffix);
-					int count = resizeAndWatermarkFolder(sub, outputDir, watermark, maxEdge, (done, file) -> {
+					int count = resizeAndWatermarkFolder(sub, outputDir, watermark, maxEdge, done -> {
 						double ratio = (double) done / totalImages;
 						progressListener
 							.accept(new ProcessingProgress(0.10d + 0.85d * ratio, "Bilder werden verarbeitet"));
